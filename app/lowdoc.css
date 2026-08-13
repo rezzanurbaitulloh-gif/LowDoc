@@ -1,0 +1,319 @@
+/* ─────────────────────────────────────────────────────────────────────
+   LowDoc — Industrial Utility Design System
+   High-contrast minimalism. Crisp 1px borders. No gradients, no blur.
+   ──────────────────────────────────────────────────────────────────── */
+
+.lowdoc {
+  --ld-bg: #0f172a;
+  --ld-panel: #1e293b;
+  --ld-panel-2: #16202f;
+  --ld-border: #334155;
+  --ld-border-strong: #475569;
+  --ld-text: #f8fafc;
+  --ld-muted: #94a3b8;
+  --ld-dim: #64748b;
+  --ld-accent: #2563eb;
+  --ld-orange: #ff5500;
+  --ld-green: #22c55e;
+  --ld-red: #ef4444;
+  --ld-yellow: #eab308;
+  --ld-mono: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --ld-sans: Inter, "Geist", ui-sans-serif, system-ui, sans-serif;
+
+  background: var(--ld-bg);
+  color: var(--ld-text);
+  font-family: var(--ld-sans);
+  min-height: 100vh;
+}
+
+.lowdoc *,
+.lowdoc *::before,
+.lowdoc *::after {
+  box-sizing: border-box;
+}
+
+/* ── primitives ────────────────────────────────────────────────────── */
+
+.ld-panel {
+  background: var(--ld-panel);
+  border: 1px solid var(--ld-border);
+}
+
+.ld-panel-2 {
+  background: var(--ld-panel-2);
+  border: 1px solid var(--ld-border);
+}
+
+.ld-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid var(--ld-border-strong);
+  background: var(--ld-panel);
+  color: var(--ld-text);
+  font-family: var(--ld-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.5rem 0.875rem;
+  cursor: pointer;
+  user-select: none;
+  transition: background 120ms linear, border-color 120ms linear, color 120ms linear;
+}
+
+.ld-btn:hover:not(:disabled) {
+  background: #283548;
+  border-color: var(--ld-border-strong);
+}
+
+.ld-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ld-btn-primary {
+  background: var(--ld-accent);
+  border-color: var(--ld-accent);
+  color: #fff;
+}
+
+.ld-btn-primary:hover:not(:disabled) {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.ld-btn-orange {
+  background: var(--ld-orange);
+  border-color: var(--ld-orange);
+  color: #fff;
+}
+
+.ld-btn-orange:hover:not(:disabled) {
+  background: #e04e00;
+  border-color: #e04e00;
+}
+
+.ld-btn-ghost {
+  background: transparent;
+  border-color: var(--ld-border);
+}
+
+.ld-btn-ghost:hover:not(:disabled) {
+  background: #1b2438;
+}
+
+.ld-input {
+  width: 100%;
+  background: var(--ld-bg);
+  border: 1px solid var(--ld-border);
+  color: var(--ld-text);
+  font-family: var(--ld-mono);
+  font-size: 0.8125rem;
+  padding: 0.5rem 0.625rem;
+  outline: none;
+  transition: border-color 120ms linear;
+}
+
+.ld-input::placeholder {
+  color: var(--ld-dim);
+}
+
+.ld-input:focus {
+  border-color: var(--ld-accent);
+}
+
+.ld-select {
+  width: 100%;
+  appearance: none;
+  background: var(--ld-bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2394a3b8' fill='none' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 0.625rem center;
+  border: 1px solid var(--ld-border);
+  color: var(--ld-text);
+  font-family: var(--ld-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.5rem 1.75rem 0.5rem 0.625rem;
+  cursor: pointer;
+  outline: none;
+}
+
+.ld-select:focus {
+  border-color: var(--ld-accent);
+}
+
+.ld-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border: 1px solid var(--ld-border);
+  background: var(--ld-bg);
+  color: var(--ld-muted);
+  font-family: var(--ld-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.03em;
+  padding: 0.3125rem 0.5rem;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 120ms linear, color 120ms linear, background 120ms linear;
+  white-space: nowrap;
+}
+
+.ld-chip:hover {
+  border-color: var(--ld-border-strong);
+  color: var(--ld-text);
+}
+
+.ld-chip-selected {
+  border-color: var(--ld-accent);
+  background: rgba(37, 99, 235, 0.16);
+  color: #93c5fd;
+}
+
+.ld-chip-danger {
+  border-color: rgba(239, 68, 68, 0.55);
+  color: #fca5a5;
+}
+
+.ld-chip-success {
+  border-color: rgba(34, 197, 94, 0.55);
+  color: #86efac;
+}
+
+.ld-chip-warn {
+  border-color: rgba(234, 179, 8, 0.55);
+  color: #fde047;
+}
+
+.ld-label {
+  display: block;
+  font-family: var(--ld-mono);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ld-dim);
+  margin-bottom: 0.375rem;
+}
+
+.ld-hr {
+  border: 0;
+  border-top: 1px solid var(--ld-border);
+}
+
+/* ── dropzone ───────────────────────────────────────────────────────── */
+
+.ld-dropzone {
+  position: relative;
+  border: 1px dashed var(--ld-border-strong);
+  background: var(--ld-panel-2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 3rem 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 120ms linear, background 120ms linear;
+}
+
+.ld-dropzone:hover,
+.ld-dropzone-drag {
+  border-color: var(--ld-orange);
+  background: #1b2438;
+}
+
+.ld-dropzone-drag {
+  border-style: solid;
+}
+
+/* ── console ────────────────────────────────────────────────────────── */
+
+.ld-console {
+  background: #0b1220;
+  border: 1px solid var(--ld-border);
+  font-family: var(--ld-mono);
+  font-size: 0.6875rem;
+  line-height: 1.6;
+}
+
+.ld-console-line {
+  display: flex;
+  gap: 0.625rem;
+  padding: 0.0625rem 0.75rem;
+  color: var(--ld-muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ld-console-line:hover {
+  background: rgba(148, 163, 184, 0.05);
+}
+
+.ld-console-time {
+  color: var(--ld-dim);
+  flex-shrink: 0;
+}
+
+.ld-console-info::before {
+  content: "▪";
+  color: var(--ld-dim);
+  flex-shrink: 0;
+}
+
+.ld-console-success::before {
+  content: "✔";
+  color: var(--ld-green);
+  flex-shrink: 0;
+}
+
+.ld-console-warn::before {
+  content: "▲";
+  color: var(--ld-yellow);
+  flex-shrink: 0;
+}
+
+.ld-console-error::before {
+  content: "✖";
+  color: var(--ld-red);
+  flex-shrink: 0;
+}
+
+.ld-console-success {
+  color: #bbf7d0;
+}
+
+.ld-console-warn {
+  color: #fef08a;
+}
+
+.ld-console-error {
+  color: #fecaca;
+}
+
+/* ── scrollbars (industrial, squared) ───────────────────────────────── */
+
+.lowdoc ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.lowdoc ::-webkit-scrollbar-track {
+  background: var(--ld-bg);
+}
+
+.lowdoc ::-webkit-scrollbar-thumb {
+  background: var(--ld-border-strong);
+  border: 2px solid var(--ld-bg);
+}
+
+.lowdoc ::-webkit-scrollbar-thumb:hover {
+  background: var(--ld-dim);
+}
+
+.lowdoc ::selection {
+  background: rgba(37, 99, 235, 0.45);
+  color: #fff;
+}

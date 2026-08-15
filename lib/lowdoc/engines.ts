@@ -203,17 +203,15 @@ async function runPandoc(
   const reader: Record<string, string> = {
     md: "markdown",
     html: "html",
-    docx: "docx",
-    odt: "odt",
-    epub: "epub",
-    rtf: "rtf",
+    txt: "plain",
     tex: "latex",
     org: "org",
     rst: "rst",
     adoc: "asciidoc",
-    txt: "plain",
     json: "json",
     xml: "jats",
+    csv: "csv",
+    tsv: "tsv",
   };
   const writer: Record<LowDocTarget, string> = {
     pdf: "pdf",
@@ -228,25 +226,26 @@ async function runPandoc(
     org: "org",
     rst: "rst",
     adoc: "asciidoc",
-    csv: "csv",
-    tsv: "tsv",
     json: "json",
     xml: "jats",
     svg: "svg",
     xlsx: "xlsx",
+    pptx: "pptx",
   };
-  const inputNameForWasm = inputName;
-  const files: Record<string, string | Blob> = {
-    [inputNameForWasm]: new Blob([inputBytes]),
-  };
+  const textWriters = new Set<LowDocTarget>(["html", "md", "rtf", "tex", "txt", "org", "rst", "adoc", "json", "xml"]);
+  const stdin = new TextDecoder().decode(inputBytes);
+  const outName = `lowdoc-output.${to}`;
   const options: Record<string, unknown> = {
     from: reader[from] ?? "markdown",
     to: writer[to] ?? "markdown",
+    "output-file": outName,
   };
-  const stdin = null;
-  const result = await pandocConvert(options, stdin, files);
-  const outBlob = result.files[inputNameForWasm];
-  if (!outBlob) throw new Error("pandoc: no output file produced");
+  if (textWriters.has(to)) options.standalone = true;
+  const result = await pandocConvert(options, stdin, {});
+  const outBlob = result.files[outName];
+  if (!outBlob || outBlob.size === 0) {
+    throw new Error(`pandoc: empty output for .${to} (${result.stderr?.trim() || "no stderr"})`);
+  }
   const data = await new Response(outBlob).arrayBuffer();
   emit(onEvent, { type: "success", message: `pandoc: ${inputName} → .${to} (${formatBytes(data.byteLength)})` });
   return new Uint8Array(data);

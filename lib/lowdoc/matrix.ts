@@ -211,20 +211,16 @@ export const OUTPUT_GROUPS: { label: string; targets: LowDocTarget[] }[] = [
 ];
 
 const PANDOC_PAIRS: [string, LowDocTarget[]][] = [
-  ["md", ["html", "docx", "pdf", "epub", "odt", "rtf", "tex", "org", "rst", "adoc", "txt", "json", "xml", "pptx"]],
-  ["html", ["md", "docx", "pdf", "epub", "odt", "rtf", "tex", "txt", "json", "xml", "org", "rst", "adoc", "pptx"]],
-  ["docx", ["md", "html", "pdf", "epub", "odt", "rtf", "tex", "txt", "json", "xml", "org", "rst", "adoc", "pptx"]],
-  ["odt", ["md", "html", "docx", "pdf", "epub", "rtf", "tex", "txt", "json", "xml", "pptx"]],
-  ["epub", ["md", "html", "docx", "pdf", "odt", "rtf", "txt", "pptx"]],
-  ["rtf", ["md", "html", "docx", "pdf", "odt", "txt", "pptx"]],
-  ["tex", ["md", "html", "docx", "pdf", "odt", "rtf", "txt", "pptx"]],
-  ["org", ["md", "html", "docx", "pdf", "odt", "rtf", "tex", "txt", "rst", "adoc", "pptx"]],
-  ["rst", ["md", "html", "docx", "pdf", "odt", "rtf", "tex", "txt", "org", "adoc", "pptx"]],
-  ["adoc", ["md", "html", "docx", "pdf", "odt", "rtf", "tex", "txt", "org", "rst", "pptx"]],
-  ["txt", ["md", "html", "docx", "pdf", "epub", "odt", "rtf", "tex", "org", "rst", "adoc", "pptx"]],
-  ["json", ["md", "html", "docx", "pdf", "txt", "pptx"]],
-  ["xml", ["md", "html", "docx", "pdf", "txt", "pptx"]],
-  ["csv", ["md", "html", "docx", "pdf", "epub", "odt", "rtf", "tex", "txt", "org", "rst", "adoc", "json", "xml", "pptx"]],
+  ["md", ["html", "docx", "epub", "odt", "rtf", "tex", "org", "rst", "adoc", "txt", "json", "xml", "pptx"]],
+  ["html", ["md", "docx", "epub", "odt", "rtf", "tex", "txt", "json", "xml", "org", "rst", "adoc", "pptx"]],
+  ["txt", ["md", "html", "docx", "epub", "odt", "rtf", "tex", "org", "rst", "adoc", "json", "xml", "pptx"]],
+  ["tex", ["md", "html", "docx", "epub", "odt", "rtf", "txt", "org", "rst", "adoc", "json", "xml", "pptx"]],
+  ["org", ["md", "html", "docx", "epub", "odt", "rtf", "tex", "txt", "rst", "adoc", "json", "xml", "pptx"]],
+  ["rst", ["md", "html", "docx", "epub", "odt", "rtf", "tex", "txt", "org", "adoc", "json", "xml", "pptx"]],
+  ["adoc", ["md", "html", "docx", "epub", "odt", "rtf", "tex", "txt", "org", "rst", "json", "xml", "pptx"]],
+  ["json", ["md", "html", "docx", "epub", "odt", "rtf", "tex", "txt", "org", "rst", "adoc", "xml", "pptx"]],
+  ["xml", ["md", "html", "docx", "epub", "odt", "rtf", "tex", "txt", "org", "rst", "adoc", "json", "pptx"]],
+  ["csv", ["md", "html", "docx", "epub", "odt", "rtf", "tex", "txt", "org", "rst", "adoc", "json", "xml", "pptx"]],
 ];
 
 const MAGICK_PAIRS: [string, LowDocTarget[]][] = [

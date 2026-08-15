@@ -9,7 +9,7 @@ import {
   runConversion as engineRunConversion,
   type EngineEvent,
 } from "./engines";
-import { pickEngine, type LowDocTarget } from "./matrix";
+import { pickEngine, findPath, type LowDocTarget } from "./matrix";
 import { saveHistory, type HistoryRecord } from "./storage";
 
 /* ── console bus ────────────────────────────────────────────────────── */
@@ -77,12 +77,15 @@ export interface ConversionTask {
 export interface PdfToolkitTask {
   id: string;
   name: string;
-  engine: "merge" | "split" | "compress";
+  engine: "merge" | "split" | "compress" | "resize";
   status: TaskStatus;
   outputName?: string;
   outputUrl?: string;
   outputSize?: number;
+  outputType?: string;
+  outputDims?: string;
   error?: string;
+  extra?: Array<{ name: string; url: string; size: number }>;
 }
 
 /* ── conversions ────────────────────────────────────────────────────── */
@@ -93,7 +96,9 @@ export async function runConversion(
   onEvent?: (e: EngineEvent) => void,
 ): Promise<{ data: Uint8Array; engine: string }> {
   const bytes = new Uint8Array(await file.arrayBuffer());
-  const engine = pickEngine(file.name.split(".").pop()?.toLowerCase() ?? "", target) ?? "unknown";
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  const path = findPath(ext, target);
+  const engine = pickEngine(ext, target) ?? path?.[0]?.engine ?? "unknown";
   const data = await engineRunConversion(file.name, bytes, target, (e) => {
     if (onEvent) onEvent(e);
     emitConsole(e.type, e.message);
@@ -107,7 +112,8 @@ export async function runBatch(
   onProgress: (task: ConversionTask) => void,
 ): Promise<void> {
   const ext = files[0]?.name.split(".").pop()?.toLowerCase() ?? "";
-  const engine = pickEngine(ext, target) ?? "unknown";
+  const path = findPath(ext, target);
+  const engine = pickEngine(ext, target) ?? path?.[0]?.engine ?? "unknown";
   const tasks: ConversionTask[] = files.map((f) => ({
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     name: f.name,
@@ -226,11 +232,43 @@ export async function runCompress(
   }
 }
 
+export interface ResizeResult {
+  data: Uint8Array;
+  width: number;
+  height: number;
+  format: "png" | "jpg" | "webp";
+}
+
+export async function runResizeImage(
+  file: File,
+  scalePercent: number,
+  format: "png" | "jpg" | "webp",
+  onEvent?: (e: EngineEvent) => void,
+): Promise<ResizeResult> {
+  const { resizeImage } = await import("./pdf-toolkit");
+  emitConsole("info", `resize: ${file.name} at ${scalePercent}% → ${format.toUpperCase()}`);
+  try {
+    const result = await resizeImage(file, scalePercent, format);
+    emitConsole(
+      "success",
+      `resize: ${file.name} ${result.width}x${result.height} ${result.format.toUpperCase()} (${formatBytes(result.data.byteLength)})`,
+    );
+    return result;
+  } catch (err) {
+    emitConsole("error", `resize: ${err instanceof Error ? err.message : String(err)}`);
+    throw err;
+  } finally {
+    if (onEvent) onEvent({ type: "info", message: "resize complete" });
+  }
+}
+
 /* ── office ─────────────────────────────────────────────────────────── */
 
-export async function officeAvailable(onEvent?: (e: EngineEvent) => void): Promise<boolean> {
+export async function officeAvailable(
+  onEvent?: (e: EngineEvent) => void,
+): Promise<{ online: boolean; version?: string }> {
   const api = await checkOffice(onEvent);
-  return api.status === "ok";
+  return { online: api.status === "ok", version: api.version };
 }
 
 export async function officeFallback(

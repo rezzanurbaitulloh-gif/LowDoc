@@ -1,7 +1,7 @@
 "use client";
 
 import { PDFDocument } from "pdf-lib";
-import { pickEngine, type LowDocTarget } from "./matrix";
+import { pickEngine, findPath, type LowDocTarget } from "./matrix";
 
 export type EngineId =
   | "pandoc"
@@ -11,7 +11,8 @@ export type EngineId =
   | "dxf"
   | "sheets"
   | "mammoth"
-  | "office";
+  | "office"
+  | "bridge";
 
 export type EngineEventType = "info" | "success" | "warn" | "error" | "progress";
 
@@ -501,17 +502,69 @@ async function runMammoth(
   throw new Error(`mammoth: unsupported target ${to}`);
 }
 
-/* ── dispatcher ─────────────────────────────────────────────────────── */
+/* ── dispatcher (direct + multi-hop universal router) ───────────────── */
 
-export async function runConversion(
+async function runBridge(
+  inputName: string,
+  inputBytes: Uint8Array,
+  to: LowDocTarget,
+  onEvent?: EngineEventHandler,
+): Promise<Uint8Array> {
+  if (to === "csv") {
+    const text = new TextDecoder("utf-8").decode(inputBytes);
+    const lines = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0);
+    const esc = (s: string) =>
+      s.includes(",") || s.includes('"') ? `"${s.replace(/"/g, '""')}"` : s;
+    const csv = lines.map(esc).join("\n") + "\n";
+    emit(onEvent, { type: "success", message: `bridge: text → csv (${lines.length} rows)` });
+    return new TextEncoder().encode(csv);
+  }
+  if (to === "svg") {
+    const mime =
+      /\.jpe?g$/i.test(inputName)
+        ? "image/jpeg"
+        : /\.gif$/i.test(inputName)
+          ? "image/gif"
+          : /\.webp$/i.test(inputName)
+            ? "image/webp"
+            : /\.bmp$/i.test(inputName)
+              ? "image/bmp"
+              : "image/png";
+    const blob = new Blob([inputBytes], { type: mime });
+    const url = URL.createObjectURL(blob);
+    try {
+      const img = new Image();
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error("image decode failed"));
+        img.src = url;
+      });
+      const w = img.naturalWidth;
+      const h = img.naturalHeight;
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext("2d")!.drawImage(img, 0, 0);
+      const dataUrl = canvas.toDataURL("image/png");
+      const svg =
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">` +
+        `<image width="${w}" height="${h}" href="${dataUrl}"/></svg>`;
+      emit(onEvent, { type: "success", message: `bridge: image → svg (${w}x${h})` });
+      return new TextEncoder().encode(svg);
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+  throw new Error(`bridge: unsupported target ${to}`);
+}
+
+async function runEngine(
+  engine: EngineId,
   inputName: string,
   inputBytes: Uint8Array,
   target: LowDocTarget,
   onEvent?: EngineEventHandler,
 ): Promise<Uint8Array> {
-  const ext = inputExtension(inputName);
-  const engine = pickEngine(ext, target);
-  emit(onEvent, { type: "info", message: `dispatch: ${inputName} (${ext}) → ${target} via ${engine ?? "?"}` });
   switch (engine) {
     case "pandoc":
       return runPandoc(inputName, inputBytes, target, onEvent);
@@ -529,9 +582,45 @@ export async function runConversion(
       return runMammoth(inputName, inputBytes, target, onEvent);
     case "office":
       return convertViaOffice(inputName, inputBytes, target, onEvent);
+    case "bridge":
+      return runBridge(inputName, inputBytes, target, onEvent);
     default:
-      throw new Error(`unsupported conversion: ${ext} → ${target}`);
+      throw new Error(`unknown engine: ${String(engine)}`);
   }
+}
+
+export async function runConversion(
+  inputName: string,
+  inputBytes: Uint8Array,
+  target: LowDocTarget,
+  onEvent?: EngineEventHandler,
+): Promise<Uint8Array> {
+  const ext = inputExtension(inputName);
+  const base = inputName.replace(/\.[^.]+$/, "");
+
+  const direct = pickEngine(ext, target);
+  if (direct) {
+    emit(onEvent, { type: "info", message: `dispatch: ${inputName} (${ext}) → ${target} via ${direct}` });
+    return runEngine(direct, inputName, inputBytes, target, onEvent);
+  }
+
+  const path = findPath(ext, target);
+  if (!path || path.length === 0) {
+    throw new Error(`unsupported conversion: ${ext} → ${target}`);
+  }
+
+  const chain = path.map((h) => `${h.engine}→${h.via}`).join(" · ");
+  emit(onEvent, { type: "info", message: `route: ${ext} → ${target} via [${chain}]` });
+
+  let data = inputBytes;
+  let currentExt = ext;
+  for (const hop of path) {
+    const hopName = `${base}.${currentExt}`;
+    data = await runEngine(hop.engine, hopName, data, hop.via as LowDocTarget, onEvent);
+    currentExt = hop.via;
+  }
+  emit(onEvent, { type: "success", message: `route: ${inputName} → ${target} done (${formatBytes(data.byteLength)})` });
+  return data;
 }
 
 export async function runBatch(
@@ -542,11 +631,13 @@ export async function runBatch(
   const grouped = new Map<EngineId, File[]>();
   for (const f of files) {
     const ext = inputExtension(f.name);
-    const engine = pickEngine(ext, target);
-    if (!engine) {
+    const direct = pickEngine(ext, target);
+    const path = direct ? null : findPath(ext, target);
+    if (!direct && (!path || path.length === 0)) {
       emit(onEvent, { type: "error", message: `skip ${f.name}: ${ext} → ${target} unsupported` });
       continue;
     }
+    const engine = direct ?? path![0].engine;
     if (!grouped.has(engine)) grouped.set(engine, []);
     grouped.get(engine)!.push(f);
   }

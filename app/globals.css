@@ -5,12 +5,19 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light dark;
 }
 
 html,
 body {
   margin: 0;
   padding: 0;
-  background: #0f172a;
+  background: #f8fafc;
+}
+
+@media (prefers-color-scheme: dark) {
+  html,
+  body {
+    background: #0f172a;
+  }
 }

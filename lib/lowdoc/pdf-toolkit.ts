@@ -63,3 +63,84 @@ export async function compressPdf(input: Uint8Array): Promise<Uint8Array> {
   const doc = await PDFDocument.load(input, { ignoreEncryption: true });
   return doc.save({ useObjectStreams: true });
 }
+
+/* ── image resize (resolution converter) ────────────────────────────── */
+
+export type ResizeFormat = "png" | "jpg" | "webp";
+
+export interface ResizedImage {
+  data: Uint8Array;
+  width: number;
+  height: number;
+  format: ResizeFormat;
+}
+
+export function resizeQualityLabel(width: number): string {
+  if (width < 320) return "Burik (pixelated)";
+  if (width < 640) return "Very Low";
+  if (width < 1280) return "SD";
+  if (width < 1920) return "HD";
+  if (width < 2560) return "Full HD";
+  if (width < 3840) return "2K";
+  return "4K / Ultra HD";
+}
+
+export async function loadImageDims(file: File): Promise<{ width: number; height: number }> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error("image decode failed"));
+      img.src = url;
+    });
+    return { width: img.naturalWidth, height: img.naturalHeight };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+export async function resizeImage(
+  file: File,
+  scalePercent: number,
+  format: ResizeFormat,
+): Promise<ResizedImage> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error("image decode failed"));
+      img.src = url;
+    });
+
+    const srcW = img.naturalWidth;
+    const srcH = img.naturalHeight;
+    const scale = Math.max(0.01, scalePercent / 100);
+    const w = Math.max(1, Math.round(srcW * scale));
+    const h = Math.max(1, Math.round(srcH * scale));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d")!;
+    // "burik" look when heavily downscaled: nearest-neighbor without smoothing
+    if (scale < 0.3) {
+      ctx.imageSmoothingEnabled = false;
+    } else {
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+    }
+    ctx.drawImage(img, 0, 0, w, h);
+
+    const mime =
+      format === "jpg" ? "image/jpeg" : format === "webp" ? "image/webp" : "image/png";
+    const blob = await new Promise<Blob>((resolve, reject) =>
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("encode failed"))), mime, 0.92),
+    );
+    const data = new Uint8Array(await blob.arrayBuffer());
+    return { data, width: w, height: h, format };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}

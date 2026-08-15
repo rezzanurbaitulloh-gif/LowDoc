@@ -84,9 +84,16 @@ export const FORMATS: LowDocFormat[] = [
   { key: "org", name: "Org Mode", extensions: ["org"], category: "markup", kind: "text", description: "Emacs Org-mode" },
   { key: "rst", name: "reStructuredText", extensions: ["rst"], category: "markup", kind: "text", description: "Docutils reST" },
   { key: "adoc", name: "AsciiDoc", extensions: ["adoc", "asciidoc"], category: "markup", kind: "text", description: "AsciiDoc markup" },
-  { key: "txt_legacy", name: "Plain Text (Legacy)", extensions: ["txt"], category: "markup", kind: "text", description: "UTF-8 text" },
   // image
   { key: "pdf", name: "PDF", extensions: ["pdf"], category: "image", kind: "binary", description: "Portable Document Format" },
+  { key: "png", name: "PNG", extensions: ["png"], category: "image", kind: "binary", description: "Portable Network Graphics" },
+  { key: "jpg", name: "JPEG", extensions: ["jpg", "jpeg"], category: "image", kind: "binary", description: "Joint Photographic Experts Group" },
+  { key: "webp", name: "WebP", extensions: ["webp"], category: "image", kind: "binary", description: "Google WebP image" },
+  { key: "gif", name: "GIF", extensions: ["gif"], category: "image", kind: "binary", description: "Graphics Interchange Format" },
+  { key: "tiff", name: "TIFF", extensions: ["tiff", "tif"], category: "image", kind: "binary", description: "Tagged Image File Format" },
+  { key: "bmp", name: "BMP", extensions: ["bmp"], category: "image", kind: "binary", description: "Windows Bitmap" },
+  { key: "ico", name: "ICO", extensions: ["ico"], category: "image", kind: "binary", description: "Windows Icon" },
+  { key: "heic", name: "HEIC", extensions: ["heic"], category: "image", kind: "binary", description: "High Efficiency Image Codec" },
 ];
 
 export const FORMAT_BY_KEY: Record<string, LowDocFormat> = Object.fromEntries(

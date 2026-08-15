@@ -11,6 +11,9 @@ const OFFICE_TIMEOUT_MS = 90_000;
 const TO_EXT: Record<string, string> = {
   pdf: "pdf",
   docx: "docx",
+  doc: "doc",
+  docm: "docm",
+  dotx: "dotx",
   odt: "odt",
   rtf: "rtf",
   txt: "txt",
@@ -19,11 +22,18 @@ const TO_EXT: Record<string, string> = {
   md: "md",
   pptx: "pptx",
   ppt: "ppt",
+  ppsx: "ppsx",
   odp: "odp",
   xlsx: "xlsx",
+  xls: "xls",
+  xlsm: "xlsm",
+  xlsb: "xlsb",
   ods: "ods",
   csv: "csv",
   tsv: "tsv",
+  png: "png",
+  jpg: "jpg",
+  svg: "svg",
 };
 
 export const runtime = "nodejs";
@@ -53,10 +63,25 @@ export async function POST(req: NextRequest) {
     const inPath = join(dir, inputName.replace(/[^A-Za-z0-9._-]/g, "_"));
     await writeFile(inPath, bytes);
 
-    await execFileAsync("soffice", ["--headless", "--norestore", "--convert-to", ext, "--outdir", dir, inPath], {
-      timeout: OFFICE_TIMEOUT_MS,
-      maxBuffer: 32 * 1024 * 1024,
-    });
+    await execFileAsync(
+      "soffice",
+      [
+        "--headless",
+        "--norestore",
+        ...(inputName.toLowerCase().endsWith(".pdf")
+          ? ["--infilter=writer_pdf_import"]
+          : []),
+        "--convert-to",
+        ext,
+        "--outdir",
+        dir,
+        inPath,
+      ],
+      {
+        timeout: OFFICE_TIMEOUT_MS,
+        maxBuffer: 32 * 1024 * 1024,
+      },
+    );
 
     // Cari file hasil konversi — hanya file (bukan direktori) yang diterima.
     let outName: string | null = null;

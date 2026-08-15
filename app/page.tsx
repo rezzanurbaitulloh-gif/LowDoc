@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { RefreshCw, ShieldCheck } from "lucide-react";
+import { Download, Eye, RefreshCw, ShieldCheck } from "lucide-react";
 import Header from "@/components/lowdoc/header";
 import ControlBar from "@/components/lowdoc/control-bar";
 import HeroDropzone from "@/components/lowdoc/hero-dropzone";
 import ConvertQueue from "@/components/lowdoc/convert-queue";
 import ConsoleLog from "@/components/lowdoc/console-log";
 import PdfToolkit from "@/components/lowdoc/pdf-toolkit";
+import PreviewModal, { type Previewable } from "@/components/lowdoc/preview-modal";
 import {
   consoleBus,
   downloadTaskOutput,
@@ -15,12 +16,14 @@ import {
   runBatch,
   runCompress,
   runMerge,
+  runResizeImage,
   runSplit,
   type ConsoleMessage,
   type ConversionTask,
   type PdfToolkitTask,
 } from "@/lib/lowdoc/pipeline";
 import { parseRanges } from "@/lib/lowdoc/pdf-toolkit";
+import type { ToolkitOp } from "@/components/lowdoc/pdf-toolkit";
 
 type Mode = "convert" | "tools";
 
@@ -34,6 +37,7 @@ export default function LowDocPage() {
   const [officeOnline, setOfficeOnline] = useState(false);
   const [officeVersion, setOfficeVersion] = useState<string | undefined>();
   const [consoleLines, setConsoleLines] = useState<ConsoleMessage[]>([]);
+  const [previewItem, setPreviewItem] = useState<Previewable | null>(null);
 
   useEffect(() => {
     const unsub = consoleBus.subscribe((m) => {
@@ -46,9 +50,9 @@ export default function LowDocPage() {
         return next.slice(-500);
       });
     });
-    officeAvailable().then((ok) => {
-      setOfficeOnline(ok);
-      setOfficeVersion(ok ? "probed" : undefined);
+    officeAvailable().then(({ online, version }) => {
+      setOfficeOnline(online);
+      if (online && version) setOfficeVersion(version);
     });
     return unsub;
   }, []);
@@ -90,7 +94,12 @@ export default function LowDocPage() {
   }, [files, target]);
 
   const handleToolkitRun = useCallback(
-    async (op: "merge" | "split" | "compress", toolkitFiles: File[], rangesText: string) => {
+    async (
+      op: ToolkitOp,
+      toolkitFiles: File[],
+      rangesText: string,
+      opts?: { scale: number; format: "png" | "jpg" | "webp" },
+    ) => {
       const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const base: PdfToolkitTask = { id, name: op, engine: op, status: "running" };
       setToolkitTasks((prev) => [base, ...prev]);
@@ -101,7 +110,7 @@ export default function LowDocPage() {
           setToolkitTasks((prev) =>
             prev.map((t) =>
               t.id === id
-                ? { ...t, status: "done", outputName: "merged.pdf", outputUrl: url, outputSize: data.byteLength }
+                ? { ...t, status: "done", outputName: "merged.pdf", outputUrl: url, outputSize: data.byteLength, outputType: "application/pdf" }
                 : t,
             ),
           );
@@ -123,12 +132,13 @@ export default function LowDocPage() {
                     outputName: outputs.map((o) => o.name).join(", "),
                     outputUrl: outputs[0]?.url,
                     outputSize: outputs.reduce((s, o) => s + o.size, 0),
+                    outputType: "application/pdf",
                     extra: outputs,
                   }
                 : t,
             ),
           );
-        } else {
+        } else if (op === "compress") {
           const file = toolkitFiles[0];
           const bytes = new Uint8Array(await file.arrayBuffer());
           const data = await runCompress(file.name, bytes);
@@ -136,7 +146,29 @@ export default function LowDocPage() {
           setToolkitTasks((prev) =>
             prev.map((t) =>
               t.id === id
-                ? { ...t, status: "done", outputName: `${file.name.replace(/\.pdf$/i, "")}-compressed.pdf`, outputUrl: url, outputSize: data.byteLength }
+                ? { ...t, status: "done", outputName: `${file.name.replace(/\.pdf$/i, "")}-compressed.pdf`, outputUrl: url, outputSize: data.byteLength, outputType: "application/pdf" }
+                : t,
+            ),
+          );
+        } else if (op === "resize") {
+          const file = toolkitFiles[0];
+          const scale = opts?.scale ?? 100;
+          const format = opts?.format ?? "png";
+          const result = await runResizeImage(file, scale, format);
+          const mime = format === "jpg" ? "image/jpeg" : format === "webp" ? "image/webp" : "image/png";
+          const url = URL.createObjectURL(new Blob([result.data], { type: mime }));
+          setToolkitTasks((prev) =>
+            prev.map((t) =>
+              t.id === id
+                ? {
+                    ...t,
+                    status: "done",
+                    outputName: `${file.name.replace(/\.[^.]+$/, "")}-resized-${scale}p.${format}`,
+                    outputUrl: url,
+                    outputSize: result.data.byteLength,
+                    outputType: mime,
+                    outputDims: `${result.width}×${result.height}`,
+                  }
                 : t,
             ),
           );
@@ -167,31 +199,43 @@ export default function LowDocPage() {
       <Header officeOnline={officeOnline} officeVersion={officeVersion} />
 
       {/* mode tabs */}
-      <div className="flex items-center gap-1 px-5 pt-4">
-        {(
-          [
-            ["convert", "Convert"],
-            ["tools", "PDF Tools"],
-          ] as [Mode, string][]
-        ).map(([m, label]) => (
-          <button
-            key={m}
-            type="button"
-            className={`ld-chip ${mode === m ? "ld-chip-selected" : ""}`}
-            onClick={() => setMode(m)}
-          >
-            {label}
-          </button>
-        ))}
-        <div className="ml-auto flex items-center gap-2 font-mono text-[10px] text-[var(--ld-dim)] uppercase tracking-wider">
-          <ShieldCheck size={12} className="text-[#86efac]" />
+      <div className="flex flex-wrap items-center gap-3 px-5 pt-5">
+        <div className="ld-seg" role="tablist" aria-label="Mode">
+          {(
+            [
+              ["convert", "Convert"],
+              ["tools", "PDF Tools"],
+            ] as [Mode, string][]
+          ).map(([m, label]) => (
+            <button
+              key={m}
+              type="button"
+              role="tab"
+              aria-selected={mode === m}
+              className={`ld-seg-btn ${mode === m ? "ld-seg-btn-active" : ""}`}
+              onClick={() => setMode(m)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="ml-auto hidden sm:flex items-center gap-2 font-mono text-[10px] text-[var(--ld-dim)] uppercase tracking-wider">
+          <ShieldCheck size={12} className="text-[var(--ld-ok)]" />
           100% offline · no uploads
         </div>
       </div>
 
       {mode === "convert" && (
-        <>
+        <div className="ld-bento px-5 pt-4 pb-2 max-w-[1440px] mx-auto">
+          <HeroDropzone
+            className="lg:col-span-2 lg:row-span-2"
+            onFiles={handleFiles}
+            onRemoveFile={handleRemoveFile}
+            files={files}
+          />
+
           <ControlBar
+            className="lg:col-span-2"
             selectedFormat={target}
             onFormatChange={(k) => {
               setTarget(k);
@@ -200,69 +244,167 @@ export default function LowDocPage() {
             onClear={handleClear}
             fileCount={files.length}
           />
-          <HeroDropzone onFiles={handleFiles} onRemoveFile={handleRemoveFile} files={files} />
-          <div className="px-5 pb-4">
+
+          <div className="lg:col-span-2">
             <button
               type="button"
-              className="ld-btn ld-btn-orange"
+              className="ld-btn ld-btn-orange w-full !py-3 !text-sm"
               disabled={running || files.length === 0}
               onClick={handleConvert}
             >
-              <RefreshCw size={13} className={running ? "animate-spin" : ""} />
+              <RefreshCw size={15} className={running ? "animate-spin" : ""} />
               {running ? "Converting…" : `Convert ${files.length > 0 ? `${files.length} file(s)` : ""}`}
             </button>
           </div>
+
           <ConvertQueue
+            className="lg:col-span-2"
             tasks={tasks}
             onDownload={(t) => downloadTaskOutput(t)}
             onRemove={(id) => setTasks((prev) => prev.filter((x) => x.id !== id))}
+            onPreview={(t) =>
+              setPreviewItem({
+                outputName: t.outputName,
+                outputUrl: t.outputUrl,
+                outputType: t.outputType,
+                outputSize: t.outputSize,
+              })
+            }
           />
-        </>
+
+          {/* toolkit results */}
+          {toolkitTasks.length > 0 && (
+            <section className="ld-card lg:col-span-2">
+              <div className="ld-card-title">
+                <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--ld-dim)]">
+                  PDF Tool results
+                </span>
+              </div>
+              <div className="divide-y divide-[var(--ld-border)]">
+                {toolkitTasks.map((t) => (
+                  <div key={t.id} className="flex items-center gap-3 py-3">
+                    <div className="font-mono text-xs">{t.engine.toUpperCase()}</div>
+                    <div className="min-w-0 flex-1">
+                      {t.status === "done" && (
+                        <span className="font-mono text-[10px] text-[var(--ld-ok)]">
+                          {t.outputName}
+                          {t.outputDims ? ` · ${t.outputDims} px` : ""}
+                        </span>
+                      )}
+                      {t.status === "error" && (
+                        <span className="font-mono text-[10px] text-[var(--ld-err)]">{t.error}</span>
+                      )}
+                      {t.status === "running" && (
+                        <span className="font-mono text-[10px] text-[var(--ld-info)]">working…</span>
+                      )}
+                    </div>
+                    {t.status === "done" && (
+                      <>
+                        <button
+                          type="button"
+                          className="ld-btn ld-btn-ghost !px-2.5 !py-1"
+                          onClick={() =>
+                            setPreviewItem({
+                              outputName: t.outputName,
+                              outputUrl: t.outputUrl,
+                              outputType: t.outputType ?? "application/pdf",
+                              outputSize: t.outputSize,
+                            })
+                          }
+                          title="Preview"
+                          aria-label="Preview result"
+                        >
+                          <Eye size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          className="ld-btn ld-btn-ghost !px-2.5 !py-1"
+                          onClick={() => handleToolkitDownload(t)}
+                          title="Download"
+                          aria-label="Download result"
+                        >
+                          <Download size={13} />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+        </div>
       )}
 
       {mode === "tools" && (
-        <PdfToolkit onRun={handleToolkitRun} />
-      )}
-
-      {/* toolkit results */}
-      {toolkitTasks.length > 0 && (
-        <section className="px-5 pb-4">
-          <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--ld-dim)]">
-            PDF Tool results
-          </span>
-          <div className="ld-panel mt-2 divide-y divide-[var(--ld-border)]">
-            {toolkitTasks.map((t) => (
-              <div key={t.id} className="flex items-center gap-3 px-4 py-3">
-                <div className="font-mono text-xs">{t.engine.toUpperCase()}</div>
-                <div className="min-w-0 flex-1">
-                  {t.status === "done" && (
-                    <span className="font-mono text-[10px] text-[#86efac]">{t.outputName}</span>
-                  )}
-                  {t.status === "error" && (
-                    <span className="font-mono text-[10px] text-[#fca5a5]">{t.error}</span>
-                  )}
-                  {t.status === "running" && (
-                    <span className="font-mono text-[10px] text-[#93c5fd]">working…</span>
-                  )}
-                </div>
-                {t.status === "done" && (
-                  <button
-                    type="button"
-                    className="ld-btn ld-btn-ghost !px-2.5 !py-1"
-                    onClick={() => handleToolkitDownload(t)}
-                  >
-                    <Download size={13} />
-                  </button>
-                )}
+        <div className="px-5 pt-4 pb-2 max-w-[1440px] mx-auto">
+          <PdfToolkit onRun={handleToolkitRun} />
+          {toolkitTasks.length > 0 && (
+            <section className="ld-card mt-4">
+              <div className="ld-card-title">
+                <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--ld-dim)]">
+                  PDF Tool results
+                </span>
               </div>
-            ))}
-          </div>
-        </section>
+              <div className="divide-y divide-[var(--ld-border)]">
+                {toolkitTasks.map((t) => (
+                  <div key={t.id} className="flex items-center gap-3 py-3">
+                    <div className="font-mono text-xs">{t.engine.toUpperCase()}</div>
+                    <div className="min-w-0 flex-1">
+                      {t.status === "done" && (
+                        <span className="font-mono text-[10px] text-[var(--ld-ok)]">
+                          {t.outputName}
+                          {t.outputDims ? ` · ${t.outputDims} px` : ""}
+                        </span>
+                      )}
+                      {t.status === "error" && (
+                        <span className="font-mono text-[10px] text-[var(--ld-err)]">{t.error}</span>
+                      )}
+                      {t.status === "running" && (
+                        <span className="font-mono text-[10px] text-[var(--ld-info)]">working…</span>
+                      )}
+                    </div>
+                    {t.status === "done" && (
+                      <>
+                        <button
+                          type="button"
+                          className="ld-btn ld-btn-ghost !px-2.5 !py-1"
+                          onClick={() =>
+                            setPreviewItem({
+                              outputName: t.outputName,
+                              outputUrl: t.outputUrl,
+                              outputType: t.outputType ?? "application/pdf",
+                              outputSize: t.outputSize,
+                            })
+                          }
+                          title="Preview"
+                          aria-label="Preview result"
+                        >
+                          <Eye size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          className="ld-btn ld-btn-ghost !px-2.5 !py-1"
+                          onClick={() => handleToolkitDownload(t)}
+                          title="Download"
+                          aria-label="Download result"
+                        >
+                          <Download size={13} />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+        </div>
       )}
 
       <ConsoleLog lines={consoleLines} />
 
-      <footer className="border-t border-[var(--ld-border)] px-5 py-4 flex items-center justify-between">
+      <PreviewModal item={previewItem} onClose={() => setPreviewItem(null)} />
+
+      <footer className="border-t border-[var(--ld-border)] px-5 py-4 flex flex-wrap items-center justify-between gap-2">
         <span className="font-mono text-[10px] text-[var(--ld-dim)] uppercase tracking-wider">
           LowDoc v0.1 — WASM-powered · privacy-first
         </span>

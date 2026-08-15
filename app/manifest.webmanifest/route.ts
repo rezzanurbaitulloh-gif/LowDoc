@@ -12,8 +12,8 @@ export function GET() {
     start_url: "/",
     scope: "/",
     display: "standalone",
-    background_color: "#0F172A",
-    theme_color: "#0F172A",
+    background_color: "#F8FAFC",
+    theme_color: "#2563EB",
     lang: "en",
     dir: "ltr",
     icons: [

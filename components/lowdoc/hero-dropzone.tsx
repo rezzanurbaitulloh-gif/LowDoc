@@ -7,10 +7,12 @@ export default function HeroDropzone({
   onFiles,
   onRemoveFile,
   files,
+  className = "",
 }: {
   onFiles: (files: File[]) => void;
   onRemoveFile: (name: string) => void;
   files: File[];
+  className?: string;
 }) {
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -26,7 +28,7 @@ export default function HeroDropzone({
   );
 
   return (
-    <section className="px-5 py-6">
+    <section className={`ld-card ${className}`}>
       <div
         className={`ld-dropzone ${dragging ? "ld-dropzone-drag" : ""}`}
         onClick={() => inputRef.current?.click()}
@@ -37,9 +39,11 @@ export default function HeroDropzone({
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
       >
-        <FileUp size={28} strokeWidth={1.5} className="text-[var(--ld-orange)]" />
-        <div className="font-mono text-sm text-[var(--ld-muted)]">
-          Drop files here or <span className="text-[var(--ld-text)] underline decoration-dashed underline-offset-4">browse</span>
+        <div className="ld-dropzone-icon">
+          <FileUp size={28} strokeWidth={1.5} />
+        </div>
+        <div className="text-sm text-[var(--ld-muted)]">
+          Drop files here or <span className="text-[var(--ld-accent)] font-semibold underline decoration-dashed underline-offset-4">browse</span>
         </div>
         <div className="font-mono text-[10px] text-[var(--ld-dim)] uppercase tracking-wider">
           Converted in your browser — files never leave your device
@@ -60,7 +64,7 @@ export default function HeroDropzone({
       {files.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-2">
           {files.map((f) => (
-            <span key={f.name} className="ld-chip">
+            <span key={f.name} className="ld-chip !cursor-default">
               {f.name}
               <span className="text-[var(--ld-dim)]">({(f.size / 1024).toFixed(1)} KB)</span>
               <button
@@ -70,6 +74,7 @@ export default function HeroDropzone({
                   e.stopPropagation();
                   onRemoveFile(f.name);
                 }}
+                aria-label={`Remove ${f.name}`}
               >
                 <X size={12} />
               </button>

@@ -12,7 +12,7 @@ export default function ConsoleLog({ lines }: { lines: ConsoleMessage[] }) {
   }, [lines.length]);
 
   return (
-    <section className="px-5 pb-8">
+    <section className="px-5 pb-8 max-w-[1440px] mx-auto">
       <div className="flex items-center justify-between mb-2">
         <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--ld-dim)]">
           Console

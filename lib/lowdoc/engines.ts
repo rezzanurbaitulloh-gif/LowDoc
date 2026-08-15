@@ -203,7 +203,7 @@ async function runPandoc(
   const reader: Record<string, string> = {
     md: "markdown",
     html: "html",
-    txt: "plain",
+    txt: "markdown",
     tex: "latex",
     org: "org",
     rst: "rst",

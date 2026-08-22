@@ -144,7 +144,7 @@ export async function runBatch(
       t.outputName = file.name.replace(/\.[^.]+$/, "") + "." + target;
       t.outputType = mimeFor(target);
       t.outputSize = data.byteLength;
-      t.outputUrl = URL.createObjectURL(new Blob([data], { type: t.outputType }));
+      t.outputUrl = URL.createObjectURL(new Blob([data as unknown as BlobPart], { type: t.outputType }));
       onProgress({ ...t });
       await saveHistory({
         id: t.id,

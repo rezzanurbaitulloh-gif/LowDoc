@@ -38,6 +38,20 @@ const TO_EXT: Record<string, string> = {
 
 export const runtime = "nodejs";
 
+let loProfileDir: string | null = null;
+async function getLoProfile(): Promise<string> {
+  if (!loProfileDir) {
+    const { mkdirSync } = await import("node:fs");
+    loProfileDir = join(tmpdir(), "lowdoc-lo-profile");
+    try {
+      mkdirSync(loProfileDir, { recursive: true });
+    } catch {
+      /* noop */
+    }
+  }
+  return loProfileDir;
+}
+
 export async function POST(req: NextRequest) {
   const fd = await req.formData();
   const file = fd.get("file");
@@ -68,6 +82,7 @@ export async function POST(req: NextRequest) {
       [
         "--headless",
         "--norestore",
+        "-env:UserInstallation=file://" + (await getLoProfile()),
         ...(inputName.toLowerCase().endsWith(".pdf")
           ? ["--infilter=writer_pdf_import"]
           : []),
@@ -100,9 +115,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "office: no output produced" }, { status: 500 });
     }
     const base = inputName.replace(/\.[^.]+$/, "");
-    outName = files.find((n) => n.toLowerCase() === `${base}.${ext}`.toLowerCase()) ?? files[0];
+    const match = files.find((n) => n.toLowerCase() === `${base}.${ext}`.toLowerCase()) ?? files[0] ?? "";
+    if (!match) {
+      return NextResponse.json({ error: "office: output missing" }, { status: 500 });
+    }
+    outName = match;
 
-    const outBytes = await import("node:fs/promises").then((m) => m.readFile(join(dir, outName)));
+    const outBytes = await import("node:fs/promises").then((m) => m.readFile(join(dir as string, match)));
     const mime =
       ext === "pdf"
         ? "application/pdf"

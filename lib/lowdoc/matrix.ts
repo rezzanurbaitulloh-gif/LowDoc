@@ -44,6 +44,7 @@ export type LowDocEngine =
   | "magick"
   | "pdflib"
   | "pdfjs"
+  | "pdftext"
   | "dxf"
   | "sheets"
   | "mammoth"
@@ -135,10 +136,12 @@ export const ENGINE_LABELS: Record<LowDocEngine, string> = {
   magick: "ImageMagick WASM",
   pdflib: "PDF-Lib",
   pdfjs: "pdf.js",
+  pdftext: "PDF Text Layer",
   dxf: "DXF Parser",
   sheets: "SheetJS",
   mammoth: "Mammoth",
   office: "LibreOffice",
+  bridge: "Bridge",
 };
 
 export const ENGINE_BADGE: Record<LowDocEngine, string> = {
@@ -146,10 +149,12 @@ export const ENGINE_BADGE: Record<LowDocEngine, string> = {
   magick: "IM",
   pdflib: "PL",
   pdfjs: "PJ",
+  pdftext: "PT",
   dxf: "DX",
   sheets: "SJ",
   mammoth: "MM",
   office: "LO",
+  bridge: "BR",
 };
 
 export const EXTENSION_OF: Record<LowDocTarget, string> = {  pdf: "pdf",
@@ -206,7 +211,7 @@ export const OUTPUT_GROUPS: { label: string; targets: LowDocTarget[] }[] = [
   },
   {
     label: "Image",
-    targets: ["png", "jpg", "webp", "gif", "tiff", "ico", "heic", "bmp", "svg"],
+    targets: ["png", "jpg", "webp", "gif", "tiff", "ico", "bmp", "svg"],
   },
 ];
 
@@ -224,16 +229,14 @@ const PANDOC_PAIRS: [string, LowDocTarget[]][] = [
 ];
 
 const MAGICK_PAIRS: [string, LowDocTarget[]][] = [
-  ["jpg", ["pdf", "png", "webp", "tiff", "gif", "ico", "heic"]],
-  ["jpeg", ["pdf", "png", "webp", "tiff", "gif", "ico", "heic"]],
-  ["png", ["pdf", "jpg", "webp", "tiff", "gif", "ico", "heic"]],
-  ["webp", ["pdf", "png", "jpg", "tiff", "gif", "ico"]],
-  ["tiff", ["pdf", "png", "jpg", "webp", "gif", "ico"]],
-  ["gif", ["pdf", "png", "jpg", "webp", "tiff", "ico"]],
-  ["bmp", ["pdf", "png", "jpg", "webp", "tiff", "gif", "ico"]],
-  ["ico", ["pdf", "png", "jpg", "webp", "tiff", "gif"]],
-  ["heic", ["pdf", "png", "jpg", "webp", "tiff", "gif"]],
-  ["pdf", ["png", "jpg", "webp", "tiff", "gif", "ico", "heic", "bmp"]],
+  ["jpg", ["png", "webp", "tiff", "gif", "ico"]],
+  ["jpeg", ["png", "webp", "tiff", "gif", "ico"]],
+  ["png", ["jpg", "webp", "tiff", "gif", "ico"]],
+  ["webp", ["png", "jpg", "tiff", "gif", "ico"]],
+  ["tiff", ["png", "jpg", "webp", "gif", "ico"]],
+  ["gif", ["png", "jpg", "webp", "tiff", "ico"]],
+  ["bmp", ["png", "jpg", "webp", "tiff", "gif", "ico"]],
+  ["ico", ["png", "jpg", "webp", "tiff", "gif"]],
 ];
 
 const PDFLIB_PAIRS: [string, LowDocTarget[]][] = [
@@ -244,8 +247,13 @@ const PDFJS_PAIRS: [string, LowDocTarget[]][] = [
   ["pdf", ["jpg", "png", "webp"]],
 ];
 
+// Text-layer extraction via pdf.js getTextContent (LibreOffice cannot export PDF→txt)
+const PDFTEXT_PAIRS: [string, LowDocTarget[]][] = [
+  ["pdf", ["txt"]],
+];
+
 const DXF_PAIRS: [string, LowDocTarget[]][] = [
-  ["dxf", ["svg", "pdf"]],
+  ["dxf", ["svg", "pdf", "txt"]],
 ];
 
 const SHEETS_PAIRS: [string, LowDocTarget[]][] = [
@@ -273,16 +281,17 @@ const OFFICE_PAIRS: [string, LowDocTarget[]][] = [
   ["pages", ["pdf", "docx", "docm", "dotx", "odt", "rtf", "txt", "html", "png", "jpg"]],
   ["rtf", ["pdf", "docx", "docm", "dotx", "odt", "txt", "html", "md", "png", "jpg"]],
   ["txt", ["pdf", "docx", "docm", "dotx", "odt", "rtf", "html", "md", "png", "jpg"]],
-  ["html", ["pdf", "docx", "docm", "dotx", "odt", "rtf", "md", "png", "jpg"]],
+  ["html", ["pdf", "docx", "docm", "dotx", "odt", "rtf", "md"]],
   ["md", ["pdf", "docx", "docm", "dotx", "odt", "rtf", "html", "png", "jpg"]],
   ["docx", ["pdf", "doc", "docm", "dotx", "odt", "rtf", "txt", "html", "md", "epub", "png", "jpg"]],
   ["odt", ["pdf", "doc", "docm", "dotx", "docx", "rtf", "txt", "html", "md", "epub", "png", "jpg"]],
-  ["epub", ["pdf", "docx", "docm", "dotx", "odt", "rtf", "txt", "html", "png", "jpg"]],
+  // epub as SOURCE removed: pandoc-wasm cannot read binary stdin and LibreOffice
+  // fails to load EPUBs it did not author itself ("source file could not be loaded").
   ["xml", ["pdf", "docx", "docm", "dotx", "odt", "html", "png", "jpg"]],
   ["wpd", ["pdf", "docx", "docm", "dotx", "odt", "rtf", "txt", "html", "md", "png", "jpg"]],
   ["sdw", ["pdf", "docx", "docm", "dotx", "odt", "rtf", "txt", "html", "png", "jpg"]],
   ["sxw", ["pdf", "docx", "docm", "dotx", "odt", "rtf", "txt", "html", "png", "jpg"]],
-  ["pdf", ["docx", "doc", "docm", "dotx", "odt", "rtf", "txt", "html", "md", "epub", "png", "jpg"]],
+  ["pdf", ["docx", "doc", "docm", "dotx", "odt", "rtf", "html", "md", "epub", "png", "jpg"]],
   // Calc-family sources
   ["xlsx", ["pdf", "xls", "xlsm", "ods", "csv", "html", "png", "jpg"]],
   ["xls", ["pdf", "xlsx", "xls", "xlsm", "ods", "csv", "html", "png", "jpg"]],
@@ -325,6 +334,7 @@ const PANDOC_MAP = pairMap(PANDOC_PAIRS);
 const MAGICK_MAP = pairMap(MAGICK_PAIRS);
 const PDFLIB_MAP = pairMap(PDFLIB_PAIRS);
 const PDFJS_MAP = pairMap(PDFJS_PAIRS);
+const PDFTEXT_MAP = pairMap(PDFTEXT_PAIRS);
 const DXF_MAP = pairMap(DXF_PAIRS);
 const SHEETS_MAP = pairMap(SHEETS_PAIRS);
 const MAMMOTH_MAP = pairMap(MAMMOTH_PAIRS);
@@ -346,6 +356,7 @@ for (const ext of Object.keys(PANDOC_MAP)) register(ext, "pandoc", PANDOC_MAP[ex
 for (const ext of Object.keys(MAGICK_MAP)) register(ext, "magick", MAGICK_MAP[ext], 2);
 for (const ext of Object.keys(PDFLIB_MAP)) register(ext, "pdflib", PDFLIB_MAP[ext], 3);
 for (const ext of Object.keys(PDFJS_MAP)) register(ext, "pdfjs", PDFJS_MAP[ext], 4);
+for (const ext of Object.keys(PDFTEXT_MAP)) register(ext, "pdftext", PDFTEXT_MAP[ext], 4);
 for (const ext of Object.keys(DXF_MAP)) register(ext, "dxf", DXF_MAP[ext], 5);
 for (const ext of Object.keys(SHEETS_MAP)) register(ext, "sheets", SHEETS_MAP[ext], 6);
 for (const ext of Object.keys(MAMMOTH_MAP)) register(ext, "mammoth", MAMMOTH_MAP[ext], 7);
@@ -398,6 +409,7 @@ const ENGINE_READ_PRIORITY: LowDocEngine[] = [
   "sheets",
   "mammoth",
   "pdfjs",
+  "pdftext",
   "magick",
   "dxf",
   "pdflib",
@@ -414,6 +426,7 @@ function buildEdges(): Record<string, Array<{ engine: LowDocEngine; to: string }
     [SHEETS_MAP, "sheets"],
     [MAMMOTH_MAP, "mammoth"],
     [PDFJS_MAP, "pdfjs"],
+    [PDFTEXT_MAP, "pdftext"],
     [MAGICK_MAP, "magick"],
     [DXF_MAP, "dxf"],
     [PDFLIB_MAP, "pdflib"],

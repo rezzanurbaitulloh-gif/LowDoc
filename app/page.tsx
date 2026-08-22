@@ -106,7 +106,7 @@ export default function LowDocPage() {
       try {
         if (op === "merge") {
           const data = await runMerge(toolkitFiles);
-          const url = URL.createObjectURL(new Blob([data], { type: "application/pdf" }));
+          const url = URL.createObjectURL(new Blob([data as unknown as BlobPart], { type: "application/pdf" }));
           setToolkitTasks((prev) =>
             prev.map((t) =>
               t.id === id
@@ -120,7 +120,7 @@ export default function LowDocPage() {
           const ranges = parseRanges(rangesText, 1000);
           const parts = await runSplit(file.name, bytes, ranges);
           const outputs = parts.map((p) => {
-            const url = URL.createObjectURL(new Blob([p.data], { type: "application/pdf" }));
+            const url = URL.createObjectURL(new Blob([p.data as unknown as BlobPart], { type: "application/pdf" }));
             return { name: p.name, url, size: p.data.byteLength };
           });
           setToolkitTasks((prev) =>
@@ -142,7 +142,7 @@ export default function LowDocPage() {
           const file = toolkitFiles[0];
           const bytes = new Uint8Array(await file.arrayBuffer());
           const data = await runCompress(file.name, bytes);
-          const url = URL.createObjectURL(new Blob([data], { type: "application/pdf" }));
+          const url = URL.createObjectURL(new Blob([data as unknown as BlobPart], { type: "application/pdf" }));
           setToolkitTasks((prev) =>
             prev.map((t) =>
               t.id === id
@@ -156,7 +156,7 @@ export default function LowDocPage() {
           const format = opts?.format ?? "png";
           const result = await runResizeImage(file, scale, format);
           const mime = format === "jpg" ? "image/jpeg" : format === "webp" ? "image/webp" : "image/png";
-          const url = URL.createObjectURL(new Blob([result.data], { type: mime }));
+          const url = URL.createObjectURL(new Blob([result.data as unknown as BlobPart], { type: mime }));
           setToolkitTasks((prev) =>
             prev.map((t) =>
               t.id === id

@@ -8,6 +8,7 @@ export type EngineId =
   | "magick"
   | "pdflib"
   | "pdfjs"
+  | "pdftext"
   | "dxf"
   | "sheets"
   | "mammoth"
@@ -98,7 +99,7 @@ export function formatBytes(bytes: number): string {
 export function downloadBytes(data: Uint8Array | string, filename: string, mime: string) {
   const blob =
     typeof data === "string"
-      ? new Blob([data], { type: mime })
+      ? new Blob([data as unknown as BlobPart], { type: mime })
       : new Blob([data as BlobPart], { type: mime });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -163,7 +164,7 @@ export async function convertViaOffice(
 ): Promise<Uint8Array> {
   emit(onEvent, { type: "info", message: `office: handing ${inputName} → ${to} to LibreOffice` });
   const fd = new FormData();
-  fd.append("file", new Blob([inputBytes]), inputName);
+  fd.append("file", new Blob([inputBytes as unknown as BlobPart]), inputName);
   fd.append("to", to);
   const res = await fetch("/api/lowdoc/office", { method: "POST", body: fd });
   if (!res.ok) {
@@ -177,6 +178,9 @@ export async function convertViaOffice(
     throw new Error(`office route ${res.status} ${detail}`.trim());
   }
   const buf = new Uint8Array(await res.arrayBuffer());
+  if (buf.byteLength === 0) {
+    throw new Error(`office: LibreOffice produced an empty .${to} — source may be unreadable or target unsupported for this input`);
+  }
   emit(onEvent, { type: "success", message: `office: converted to .${to} (${formatBytes(buf.byteLength)})` });
   return buf;
 }
@@ -213,7 +217,7 @@ async function runPandoc(
     csv: "csv",
     tsv: "tsv",
   };
-  const writer: Record<LowDocTarget, string> = {
+  const writer: Partial<Record<LowDocTarget, string>> = {
     pdf: "pdf",
     docx: "docx",
     odt: "odt",
@@ -241,9 +245,19 @@ async function runPandoc(
     "output-file": outName,
   };
   if (textWriters.has(to)) options.standalone = true;
-  const result = await pandocConvert(options, stdin, {});
-  const outBlob = result.files[outName];
-  if (!outBlob || outBlob.size === 0) {
+  let result = await pandocConvert(options, stdin, {});
+  let outBlob = result.files[outName];
+  if (!outBlob && from === "json") {
+    emit(onEvent, { type: "info", message: "pandoc: not a pandoc AST JSON — retrying as plain text" });
+    options.from = "markdown";
+    result = await pandocConvert(options, stdin, {});
+    outBlob = result.files[outName];
+  }
+  if (!outBlob) {
+    throw new Error(`pandoc: no output for .${to} (${result.stderr?.trim() || "conversion failed"})`);
+  }
+  const outSize = typeof outBlob === "string" ? outBlob.length : outBlob.size;
+  if (outSize === 0) {
     throw new Error(`pandoc: empty output for .${to} (${result.stderr?.trim() || "no stderr"})`);
   }
   const data = await new Response(outBlob).arrayBuffer();
@@ -257,24 +271,25 @@ let magickReady = false;
 
 async function ensureMagick(): Promise<void> {
   if (magickReady) return;
-  const { initialize } = await import("@imagemagick/magick-wasm");
-  const { default: magickWasmUrl } = await import("@imagemagick/magick-wasm/magick.wasm");
-  const wasmBytes = await fetch(magickWasmUrl).then((r) => r.arrayBuffer());
-  await initialize(wasmBytes);
+  const { initializeImageMagick } = await import("@imagemagick/magick-wasm");
+  const res = await fetch("/wasm-magick.wasm");
+  if (!res.ok) throw new Error(`magick: failed to load /wasm-magick.wasm (${res.status})`);
+  await initializeImageMagick(await res.arrayBuffer());
   magickReady = true;
 }
 
-const MAGICK_TARGET_EXT: Record<string, string> = {
-  pdf: "pdf",
-  png: "png",
-  jpg: "jpg",
-  jpeg: "jpg",
-  webp: "webp",
-  tiff: "tiff",
-  gif: "gif",
-  ico: "ico",
-  heic: "heic",
-  bmp: "bmp",
+const MAGICK_FORMAT_BY_EXT: Record<string, string> = {
+  png: "Png",
+  jpg: "Jpeg",
+  jpeg: "Jpeg",
+  webp: "WebP",
+  gif: "Gif",
+  tiff: "Tiff",
+  tif: "Tiff",
+  bmp: "Bmp",
+  ico: "Ico",
+  heic: "Heic",
+  heif: "Heif",
 };
 
 async function runMagick(
@@ -284,22 +299,27 @@ async function runMagick(
   onEvent?: EngineEventHandler,
 ): Promise<Uint8Array> {
   await ensureMagick();
-  const { Magick } = await import("@imagemagick/magick-wasm");
-  const targetExt = MAGICK_TARGET_EXT[to] ?? "png";
-  const commands = [
-    "convert",
-    "input:" + inputName,
-    "-density",
-    "150",
-    "-quality",
-    "92",
-    targetExt + ":-",
-  ];
-  const result = await Magick.Command(commands, { inputFiles: [new Blob([inputBytes])] });
-  if (!result.length) throw new Error("magick: no output produced");
-  const blob = result[0].blob;
-  const data = new Uint8Array(await blob.arrayBuffer());
-  emit(onEvent, { type: "success", message: `magick: ${inputName} → .${targetExt} (${formatBytes(data.byteLength)})` });
+  const { ImageMagick, MagickFormat } = await import("@imagemagick/magick-wasm");
+  const fmt = MagickFormat as unknown as Record<string, string>;
+  const outKey = MAGICK_FORMAT_BY_EXT[to];
+  const outFmt = outKey ? fmt[outKey] : undefined;
+  if (!outFmt) throw new Error(`magick: unsupported output format .${to}`);
+  const inKey = MAGICK_FORMAT_BY_EXT[inputExtension(inputName)];
+  const inFmt = inKey ? fmt[inKey] : undefined;
+
+  const data = (
+    inFmt
+      ? await ImageMagick.read(inputBytes, inFmt as never, (img) => {
+          if (to === "ico" && (img.width > 256 || img.height > 256)) {
+            const ratio = Math.min(256 / img.width, 256 / img.height);
+            img.resize(Math.max(1, Math.round(img.width * ratio)), Math.max(1, Math.round(img.height * ratio)));
+          }
+          return img.write(outFmt as never, (d) => d.slice(0));
+        })
+      : await ImageMagick.read(inputBytes, (img) => img.write(outFmt as never, (d) => d.slice(0)))
+  ) as Uint8Array;
+  if (!data.byteLength) throw new Error("magick: empty output produced");
+  emit(onEvent, { type: "success", message: `magick: ${inputName} → .${to} (${formatBytes(data.byteLength)})` });
   return data;
 }
 
@@ -322,11 +342,38 @@ async function runPdfLib(
 
 let pdfjsReady = false;
 
+async function runPdfText(
+  inputName: string,
+  inputBytes: Uint8Array,
+  to: LowDocTarget,
+  onEvent?: EngineEventHandler,
+): Promise<Uint8Array> {
+  await ensurePdfJs();
+  const pdfjsLib = await import("pdfjs-dist");
+  const task = pdfjsLib.getDocument({ data: inputBytes });
+  const pdf = await task.promise;
+  const parts: string[] = [];
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const tc = await page.getTextContent();
+    const line = tc.items
+      .map((it) => ("str" in it ? it.str : ""))
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (line) parts.push(line);
+    emit(onEvent, { type: "progress", message: `pdftext: extracting page ${i}/${pdf.numPages}`, progress: i / pdf.numPages });
+  }
+  const text = parts.join("\n\n");
+  if (!text) throw new Error("pdftext: no extractable text in PDF (image-only?)");
+  emit(onEvent, { type: "success", message: `pdftext: extracted ${text.length} chars → .${to}` });
+  return new TextEncoder().encode(text);
+}
+
 async function ensurePdfJs(): Promise<void> {
   if (pdfjsReady) return;
   const pdfjsLib = await import("pdfjs-dist");
-  const { default: pdfjsWorkerUrl } = await import("pdfjs-dist/build/pdf.worker.min.mjs?url");
-  pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
   pdfjsReady = true;
 }
 
@@ -387,14 +434,25 @@ async function runDxf(
   const text = new TextDecoder().decode(inputBytes);
   const dxf = parser.parseSync(text);
   if (!dxf) throw new Error("dxf: parse failed");
+  if (to === "txt") {
+    const entities = (dxf as { entities?: unknown[] }).entities ?? [];
+    const lines: string[] = [`DXF drawing: ${entities.length} entities`];
+    for (const e of entities.slice(0, 200)) {
+      const ent = e as { type?: string; layer?: string };
+      lines.push(`- ${ent.type ?? "UNKNOWN"} on layer ${ent.layer ?? "0"}`);
+    }
+    const out = lines.join("\n");
+    emit(onEvent, { type: "success", message: `dxf: ${inputName} → txt (${entities.length} entities)` });
+    return new TextEncoder().encode(out);
+  }
   const { renderDxfToSvg } = await import("./dxf-render");
-  const svg = renderDxfToSvg(dxf);
+  const rendered = renderDxfToSvg(dxf);
   if (to === "svg") {
-    emit(onEvent, { type: "success", message: `dxf: ${inputName} → svg` });
-    return new TextEncoder().encode(svg);
+    emit(onEvent, { type: "success", message: `dxf: ${inputName} → svg (${rendered.entities} entities)` });
+    return new TextEncoder().encode(rendered.svg);
   }
   // svg → pdf via browser canvas
-  const blob = new Blob([svg], { type: "image/svg+xml" });
+  const blob = new Blob([rendered.svg], { type: "image/svg+xml" });
   const url = URL.createObjectURL(blob);
   const img = new Image();
   await new Promise<void>((resolve, reject) => {
@@ -412,12 +470,13 @@ async function runDxf(
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
   URL.revokeObjectURL(url);
   const pdf = await PDFDocument.create();
-  const page = pdf.addPage([canvas.width, canvas.height]);
   const png = canvas.toDataURL("image/png");
   const bin = atob(png.split(",")[1]);
   const arr = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-  page.embedPng(arr);
+  const embedded = await pdf.embedPng(arr);
+  const page = pdf.addPage([canvas.width, canvas.height]);
+  page.drawImage(embedded, { x: 0, y: 0, width: canvas.width, height: canvas.height });
   const out = await pdf.save();
   emit(onEvent, { type: "success", message: `dxf: ${inputName} → pdf` });
   return new Uint8Array(out);
@@ -529,7 +588,7 @@ async function runBridge(
             : /\.bmp$/i.test(inputName)
               ? "image/bmp"
               : "image/png";
-    const blob = new Blob([inputBytes], { type: mime });
+    const blob = new Blob([inputBytes as unknown as BlobPart], { type: mime });
     const url = URL.createObjectURL(blob);
     try {
       const img = new Image();
@@ -573,6 +632,8 @@ async function runEngine(
       return runPdfLib(inputName, inputBytes, target, onEvent);
     case "pdfjs":
       return runPdfJs(inputName, inputBytes, target, onEvent);
+    case "pdftext":
+      return runPdfText(inputName, inputBytes, target, onEvent);
     case "dxf":
       return runDxf(inputName, inputBytes, target, onEvent);
     case "sheets":
@@ -596,6 +657,11 @@ export async function runConversion(
 ): Promise<Uint8Array> {
   const ext = inputExtension(inputName);
   const base = inputName.replace(/\.[^.]+$/, "");
+
+  if (ext === target) {
+    emit(onEvent, { type: "info", message: `passthrough: ${inputName} is already .${target}` });
+    return inputBytes;
+  }
 
   const direct = pickEngine(ext, target);
   if (direct) {

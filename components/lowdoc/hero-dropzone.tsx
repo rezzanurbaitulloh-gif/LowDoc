@@ -43,7 +43,7 @@ export default function HeroDropzone({
           <FileUp size={28} strokeWidth={1.5} />
         </div>
         <div className="text-sm text-[var(--ld-muted)]">
-          Drop files here or <span className="text-[var(--ld-accent)] font-semibold underline decoration-dashed underline-offset-4">browse</span>
+          Drop files here or <span className="text-[var(--ld-orange)] font-semibold underline decoration-solid underline-offset-4">browse</span>
         </div>
         <div className="font-mono text-[10px] text-[var(--ld-dim)] uppercase tracking-wider">
           Converted in your browser — files never leave your device

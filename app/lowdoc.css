@@ -1,63 +1,70 @@
 /* ─────────────────────────────────────────────────────────────────────
-   LowDoc — Flat Design System (ui-ux-pro-max)
-   Light-first, dark via prefers-color-scheme. Soft shadows, generous
-   radii, typography-first. Bento Grid layout classes included.
+   LowDoc — Print-shop / Paper Design System
+   Warm paper canvas, ink-black type, hairline rules, letterpress
+   buttons, registration-mark dropzone. Orange = brand stamp.
+   Light-first, dark via prefers-color-scheme (paper → ink inversion).
    ──────────────────────────────────────────────────────────────────── */
 
 .lowdoc {
-  --ld-radius: 16px;
-  --ld-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.05);
-  --ld-shadow-hover: 0 2px 4px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.1);
+  --ld-radius: 6px;
+  --ld-radius-lg: 8px;
+  --ld-shadow: none;
+  --ld-shadow-hover: none;
+  --ld-press: 2px 2px 0 var(--ld-text);
 
-  /* light tokens */
-  --ld-bg: #f8fafc;
-  --ld-panel: #ffffff;
-  --ld-panel-2: #f1f5f9;
-  --ld-border: #e4ecfc;
-  --ld-border-strong: #c9d9f7;
-  --ld-text: #0f172a;
-  --ld-muted: #475569;
-  --ld-dim: #94a3b8;
-  --ld-accent: #2563eb;
-  --ld-accent-soft: rgba(37, 99, 235, 0.1);
-  --ld-orange: #d97706;
-  --ld-green: #16a34a;
-  --ld-red: #dc2626;
-  --ld-yellow: #ca8a04;
-  --ld-ok: #15803d;
-  --ld-err: #b91c1c;
-  --ld-info: #1d4ed8;
-  --ld-mono: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace;
-  --ld-sans: Inter, "Geist", ui-sans-serif, system-ui, sans-serif;
+  /* light tokens — paper */
+  --ld-bg: #f4efe4;
+  --ld-panel: #fdfaf3;
+  --ld-panel-2: #ece5d5;
+  --ld-border: #ddd2bd;
+  --ld-border-strong: #b9a988;
+  --ld-text: #211b10;
+  --ld-muted: #5d5340;
+  --ld-dim: #98896c;
+  --ld-accent: #bc4a10;
+  --ld-accent-soft: rgba(188, 74, 16, 0.09);
+  --ld-orange: #bc4a10;
+  --ld-green: #3e7040;
+  --ld-red: #a83a26;
+  --ld-yellow: #97701a;
+  --ld-ok: #33682f;
+  --ld-err: #a02c1c;
+  --ld-info: #1f5fa8;
+  --ld-display: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --ld-sans: "Archivo", ui-sans-serif, system-ui, sans-serif;
+  --ld-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  background: var(--ld-bg);
+  background:
+    repeating-linear-gradient(0deg, transparent 0 27px, rgba(33, 27, 16, 0.022) 27px 28px),
+    var(--ld-bg);
   color: var(--ld-text);
   font-family: var(--ld-sans);
   min-height: 100vh;
-  transition: background 200ms ease, color 200ms ease;
 }
 
 @media (prefers-color-scheme: dark) {
   .lowdoc {
-    --ld-bg: #0f172a;
-    --ld-panel: #1e293b;
-    --ld-panel-2: #16202f;
-    --ld-border: #2c3a52;
-    --ld-border-strong: #475569;
-    --ld-text: #f8fafc;
-    --ld-muted: #94a3b8;
-    --ld-dim: #64748b;
-    --ld-accent: #3b82f6;
-    --ld-accent-soft: rgba(59, 130, 246, 0.16);
-    --ld-orange: #f59e0b;
-    --ld-green: #22c55e;
-    --ld-red: #ef4444;
-    --ld-yellow: #eab308;
-    --ld-ok: #4ade80;
-    --ld-err: #fca5a5;
-    --ld-info: #93c5fd;
-    --ld-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.28);
-    --ld-shadow-hover: 0 2px 4px rgba(0, 0, 0, 0.35), 0 10px 28px rgba(0, 0, 0, 0.4);
+    /* dark tokens — ink */
+    --ld-bg: #16120c;
+    --ld-panel: #211b12;
+    --ld-panel-2: #191409;
+    --ld-border: #39301e;
+    --ld-border-strong: #58492e;
+    --ld-text: #f1e9d8;
+    --ld-muted: #b4a78b;
+    --ld-dim: #7e7156;
+    --ld-accent: #e08138;
+    --ld-accent-soft: rgba(224, 129, 56, 0.13);
+    --ld-orange: #e08138;
+    --ld-green: #7fbf72;
+    --ld-red: #e08573;
+    --ld-yellow: #d8b45a;
+    --ld-ok: #86c47a;
+    --ld-err: #eb9a87;
+    --ld-info: #8ab4de;
+    background:
+      repeating-linear-gradient(0deg, transparent 0 27px, rgba(241, 233, 216, 0.02) 27px 28px),
+      var(--ld-bg);
   }
 }
 
@@ -72,7 +79,7 @@
 .ld-bento {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  gap: 14px;
   align-items: stretch;
 }
 
@@ -91,24 +98,26 @@
 .ld-card {
   background: var(--ld-panel);
   border: 1px solid var(--ld-border);
+  border-top: 2px solid var(--ld-text);
   border-radius: var(--ld-radius);
   box-shadow: var(--ld-shadow);
   padding: 1.25rem;
   min-width: 0;
-  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  transition: border-color 160ms ease;
 }
 
 .ld-card:hover {
   box-shadow: var(--ld-shadow-hover);
+  border-top-color: var(--ld-orange);
 }
 
 .ld-card-hover {
-  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  transition: border-color 160ms ease;
 }
 
 .ld-card-hover:hover {
-  transform: scale(1.02);
-  box-shadow: var(--ld-shadow-hover);
+  transform: none;
+  border-color: var(--ld-border-strong);
 }
 
 .ld-card-title {
@@ -117,6 +126,10 @@
   justify-content: space-between;
   gap: 0.5rem;
   margin-bottom: 0.875rem;
+  font-family: var(--ld-display);
+  font-weight: 600;
+  font-size: 1.0625rem;
+  letter-spacing: -0.01em;
 }
 
 /* ── primitives ────────────────────────────────────────────────────── */
@@ -124,13 +137,13 @@
 .ld-panel {
   background: var(--ld-panel);
   border: 1px solid var(--ld-border);
-  border-radius: 12px;
+  border-radius: var(--ld-radius);
 }
 
 .ld-panel-2 {
   background: var(--ld-panel-2);
   border: 1px solid var(--ld-border);
-  border-radius: 12px;
+  border-radius: var(--ld-radius);
 }
 
 .ld-btn {
@@ -144,20 +157,21 @@
   font-family: var(--ld-sans);
   font-size: 0.8125rem;
   font-weight: 600;
+  letter-spacing: 0.01em;
   padding: 0.5rem 1rem;
-  border-radius: 10px;
+  border-radius: 4px;
   cursor: pointer;
   user-select: none;
-  transition: background 150ms ease, border-color 150ms ease, color 150ms ease, transform 120ms ease;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease, transform 100ms ease, box-shadow 100ms ease;
 }
 
 .ld-btn:hover:not(:disabled) {
   background: var(--ld-panel-2);
-  border-color: var(--ld-border-strong);
+  border-color: var(--ld-text);
 }
 
 .ld-btn:active:not(:disabled) {
-  transform: scale(0.97);
+  transform: translate(1px, 1px);
 }
 
 .ld-btn:disabled {
@@ -166,36 +180,50 @@
 }
 
 .ld-btn-primary {
-  background: var(--ld-accent);
-  border-color: var(--ld-accent);
-  color: #fff;
+  background: var(--ld-text);
+  border-color: var(--ld-text);
+  color: var(--ld-bg);
+  box-shadow: var(--ld-press);
 }
 
 .ld-btn-primary:hover:not(:disabled) {
-  background: #1d4ed8;
-  border-color: #1d4ed8;
+  background: var(--ld-text);
+  border-color: var(--ld-text);
+  filter: brightness(1.12);
+}
+
+.ld-btn-primary:active:not(:disabled),
+.ld-btn-orange:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: none;
 }
 
 .ld-btn-orange {
   background: var(--ld-orange);
-  border-color: var(--ld-orange);
-  color: #fff;
+  border-color: var(--ld-text);
+  color: #fdfaf3;
+  box-shadow: var(--ld-press);
 }
 
 .ld-btn-orange:hover:not(:disabled) {
-  filter: brightness(1.08);
-  border-color: var(--ld-orange);
+  filter: brightness(1.07);
+  border-color: var(--ld-text);
 }
 
 .ld-btn-ghost {
   background: transparent;
-  border-color: var(--ld-border);
+  border-color: transparent;
   color: var(--ld-muted);
+  text-decoration: underline;
+  text-decoration-color: var(--ld-border-strong);
+  text-underline-offset: 3px;
 }
 
 .ld-btn-ghost:hover:not(:disabled) {
-  background: var(--ld-panel-2);
-  color: var(--ld-text);
+  background: var(--ld-accent-soft);
+  border-color: transparent;
+  color: var(--ld-orange);
+  text-decoration-color: var(--ld-orange);
 }
 
 .ld-input {
@@ -206,9 +234,9 @@
   font-family: var(--ld-mono);
   font-size: 0.8125rem;
   padding: 0.5rem 0.625rem;
-  border-radius: 10px;
+  border-radius: 4px;
   outline: none;
-  transition: border-color 150ms ease, box-shadow 150ms ease;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
 }
 
 .ld-input::placeholder {
@@ -216,88 +244,99 @@
 }
 
 .ld-input:focus {
-  border-color: var(--ld-accent);
-  box-shadow: 0 0 0 3px var(--ld-accent-soft);
+  border-color: var(--ld-orange);
+  box-shadow: inset 0 0 0 1px var(--ld-orange);
 }
 
 .ld-select {
   width: 100%;
   appearance: none;
-  background: var(--ld-panel) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2394a3b8' fill='none' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 0.625rem center;
+  background: var(--ld-panel) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2398896c' fill='none' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 0.625rem center;
   border: 1px solid var(--ld-border);
   color: var(--ld-text);
   font-family: var(--ld-mono);
   font-size: 0.75rem;
   padding: 0.5rem 1.75rem 0.5rem 0.625rem;
-  border-radius: 10px;
+  border-radius: 4px;
   cursor: pointer;
   outline: none;
-  transition: border-color 150ms ease, box-shadow 150ms ease;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
 }
 
 .ld-select:focus {
-  border-color: var(--ld-accent);
-  box-shadow: 0 0 0 3px var(--ld-accent-soft);
+  border-color: var(--ld-orange);
+  box-shadow: inset 0 0 0 1px var(--ld-orange);
 }
 
+/* chips → rubber stamps */
 .ld-chip {
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  border: 1px solid var(--ld-border);
+  border: 1px solid var(--ld-border-strong);
   background: var(--ld-panel);
   color: var(--ld-muted);
-  font-family: var(--ld-sans);
-  font-size: 0.75rem;
+  font-family: var(--ld-mono);
+  font-size: 0.6875rem;
   font-weight: 500;
-  padding: 0.3125rem 0.6875rem;
-  border-radius: 999px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.3125rem 0.625rem;
+  border-radius: 3px;
   cursor: pointer;
   user-select: none;
-  transition: border-color 150ms ease, color 150ms ease, background 150ms ease, transform 120ms ease;
+  transition: border-color 140ms ease, color 140ms ease, background 140ms ease, box-shadow 100ms ease, transform 100ms ease;
   white-space: nowrap;
 }
 
 .ld-chip:hover {
-  border-color: var(--ld-border-strong);
+  border-color: var(--ld-text);
   color: var(--ld-text);
 }
 
 .ld-chip:active {
-  transform: scale(0.96);
+  transform: translateY(1px);
 }
 
 .ld-chip-selected {
-  border-color: var(--ld-accent);
-  background: var(--ld-accent-soft);
-  color: var(--ld-accent);
+  border-color: var(--ld-text);
+  background: var(--ld-orange);
+  color: #fdfaf3;
   font-weight: 600;
+  box-shadow: 1.5px 1.5px 0 var(--ld-text);
 }
 
 .ld-chip-danger {
-  border-color: color-mix(in srgb, var(--ld-red) 45%, transparent);
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--ld-red) 55%, transparent);
   color: var(--ld-red);
 }
 
 .ld-chip-success {
-  border-color: color-mix(in srgb, var(--ld-green) 45%, transparent);
+  border-color: color-mix(in srgb, var(--ld-green) 55%, transparent);
   color: var(--ld-green);
 }
 
 .ld-chip-warn {
-  border-color: color-mix(in srgb, var(--ld-yellow) 45%, transparent);
+  border-color: color-mix(in srgb, var(--ld-yellow) 60%, transparent);
   color: var(--ld-yellow);
 }
 
+/* spec-sheet micro labels */
 .ld-label {
   display: block;
-  font-family: var(--ld-sans);
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
+  font-family: var(--ld-mono);
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--ld-dim);
   margin-bottom: 0.375rem;
+}
+
+.ld-label::before {
+  content: "§ ";
+  color: var(--ld-orange);
 }
 
 .ld-hr {
@@ -309,44 +348,52 @@
 
 .ld-seg {
   display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  background: var(--ld-panel-2);
-  border: 1px solid var(--ld-border);
-  border-radius: 999px;
-  padding: 3px;
+  align-items: stretch;
+  gap: 0;
+  background: var(--ld-panel);
+  border: 1px solid var(--ld-border-strong);
+  border-radius: 4px;
+  padding: 0;
+  overflow: hidden;
 }
 
 .ld-seg-btn {
   border: 0;
+  border-right: 1px solid var(--ld-border);
   background: transparent;
   color: var(--ld-muted);
   font-family: var(--ld-sans);
   font-size: 0.8125rem;
   font-weight: 600;
-  padding: 0.375rem 1rem;
-  border-radius: 999px;
+  padding: 0.4375rem 1.125rem;
+  border-radius: 0;
   cursor: pointer;
   user-select: none;
-  transition: background 150ms ease, color 150ms ease, box-shadow 150ms ease;
+  transition: background 140ms ease, color 140ms ease, box-shadow 140ms ease;
+}
+
+.ld-seg-btn:last-child {
+  border-right: 0;
 }
 
 .ld-seg-btn:hover {
   color: var(--ld-text);
+  background: var(--ld-panel-2);
 }
 
 .ld-seg-btn-active {
   background: var(--ld-panel);
   color: var(--ld-text);
-  box-shadow: var(--ld-shadow);
+  box-shadow: inset 0 -3px 0 var(--ld-orange);
 }
 
-/* ── dropzone ───────────────────────────────────────────────────────── */
+/* ── dropzone with registration marks ─────────────────────────────── */
 
 .ld-dropzone {
   position: relative;
-  border: 2px dashed var(--ld-border-strong);
-  background: var(--ld-panel-2);
+  border: 1px solid var(--ld-border-strong);
+  background:
+    repeating-linear-gradient(-45deg, transparent 0 7px, var(--ld-accent-soft) 7px 8px);
   border-radius: var(--ld-radius);
   display: flex;
   flex-direction: column;
@@ -356,102 +403,138 @@
   padding: 3rem 1.5rem;
   text-align: center;
   cursor: pointer;
-  transition: border-color 150ms ease, background 150ms ease, transform 150ms ease;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.ld-dropzone::before,
+.ld-dropzone::after {
+  content: "";
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-color: var(--ld-orange);
+  border-style: solid;
+  border-width: 0;
+  transition: width 150ms ease, height 150ms ease;
+}
+
+.ld-dropzone::before {
+  top: 7px;
+  left: 7px;
+  border-top-width: 2px;
+  border-left-width: 2px;
+}
+
+.ld-dropzone::after {
+  bottom: 7px;
+  right: 7px;
+  border-bottom-width: 2px;
+  border-right-width: 2px;
 }
 
 .ld-dropzone:hover,
 .ld-dropzone-drag {
   border-color: var(--ld-orange);
-  background: var(--ld-accent-soft);
+  background: var(--ld-panel);
 }
 
-.ld-dropzone-drag {
-  border-style: solid;
-  transform: scale(1.005);
+.ld-dropzone-drag::before,
+.ld-dropzone-drag::after {
+  width: calc(100% - 14px);
+  height: calc(100% - 14px);
 }
 
 .ld-dropzone-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 3.5rem;
-  height: 3.5rem;
-  border-radius: 999px;
-  background: var(--ld-accent-soft);
-  color: var(--ld-accent);
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 4px;
+  border: 2px solid var(--ld-text);
+  background: var(--ld-panel);
+  box-shadow: var(--ld-press);
+  color: var(--ld-orange);
 }
 
-/* ── console ────────────────────────────────────────────────────────── */
+/* ── console — ink slab ────────────────────────────────────────────── */
 
 .ld-console {
-  background: #0b1220;
-  border: 1px solid var(--ld-border);
-  border-radius: 12px;
+  background: #191307;
+  border: 1px solid var(--ld-text);
+  border-radius: var(--ld-radius);
   font-family: var(--ld-mono);
   font-size: 0.6875rem;
-  line-height: 1.6;
+  line-height: 1.65;
+  color: #cfc4a8;
+}
+
+@media (prefers-color-scheme: dark) {
+  .ld-console {
+    border-color: var(--ld-border-strong);
+  }
 }
 
 .ld-console-line {
   display: flex;
   gap: 0.625rem;
   padding: 0.0625rem 0.75rem;
-  color: var(--ld-muted);
+  color: inherit;
   white-space: pre-wrap;
   word-break: break-word;
 }
 
 .ld-console-line:hover {
-  background: rgba(148, 163, 184, 0.05);
+  background: rgba(207, 196, 168, 0.06);
 }
 
 .ld-console-time {
-  color: var(--ld-dim);
+  color: #8d8163;
   flex-shrink: 0;
 }
 
 .ld-console-info::before {
   content: "▪";
-  color: var(--ld-dim);
+  color: #8d8163;
   flex-shrink: 0;
 }
 
 .ld-console-success::before {
   content: "✔";
-  color: var(--ld-green);
+  color: #93c98a;
   flex-shrink: 0;
 }
 
 .ld-console-warn::before {
   content: "▲";
-  color: var(--ld-yellow);
+  color: #dcc06a;
   flex-shrink: 0;
 }
 
 .ld-console-error::before {
   content: "✖";
-  color: var(--ld-red);
+  color: #e89a85;
   flex-shrink: 0;
 }
 
 .ld-console-success {
-  color: #bbf7d0;
+  color: #c4e2bb;
 }
 
 .ld-console-warn {
-  color: #fef08a;
+  color: #efe0ac;
 }
 
 .ld-console-error {
-  color: #fecaca;
+  color: #f2c4b6;
 }
 
 /* ── focus & accessibility ─────────────────────────────────────────── */
 
 .lowdoc :focus-visible {
-  outline: 2px solid var(--ld-accent);
+  outline: 2px solid var(--ld-orange);
   outline-offset: 2px;
-  border-radius: 6px;
+  border-radius: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -477,7 +560,7 @@
 
 .lowdoc ::-webkit-scrollbar-thumb {
   background: var(--ld-border-strong);
-  border-radius: 999px;
+  border-radius: 0;
   border: 2px solid var(--ld-bg);
 }
 
@@ -486,6 +569,6 @@
 }
 
 .lowdoc ::selection {
-  background: rgba(37, 99, 235, 0.25);
+  background: rgba(188, 74, 16, 0.24);
   color: var(--ld-text);
 }

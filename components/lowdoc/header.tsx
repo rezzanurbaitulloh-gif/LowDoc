@@ -2,6 +2,7 @@
 
 import { FileDown, WifiOff } from "lucide-react";
 import InstallButton from "./install-button";
+import ThemeToggle from "./theme-toggle";
 
 export default function Header({
   officeOnline,
@@ -43,6 +44,7 @@ export default function Header({
             </>
           )}
         </span>
+        <ThemeToggle />
         <InstallButton />
       </div>
     </header>

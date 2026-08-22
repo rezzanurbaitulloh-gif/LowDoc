@@ -42,8 +42,7 @@
   min-height: 100vh;
 }
 
-@media (prefers-color-scheme: dark) {
-  .lowdoc {
+html[data-theme="dark"] .lowdoc {
     /* dark tokens — ink */
     --ld-bg: #16120c;
     --ld-panel: #211b12;
@@ -65,7 +64,6 @@
     background:
       repeating-linear-gradient(0deg, transparent 0 27px, rgba(241, 233, 216, 0.02) 27px 28px),
       var(--ld-bg);
-  }
 }
 
 .lowdoc *,
@@ -469,10 +467,8 @@
   color: #cfc4a8;
 }
 
-@media (prefers-color-scheme: dark) {
-  .ld-console {
-    border-color: var(--ld-border-strong);
-  }
+html[data-theme="dark"] .ld-console {
+  border-color: var(--ld-border-strong);
 }
 
 .ld-console-line {

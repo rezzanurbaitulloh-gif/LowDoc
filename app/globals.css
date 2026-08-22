@@ -4,8 +4,12 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: light dark;
+html {
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 html,
@@ -15,9 +19,6 @@ body {
   background: #f4efe4;
 }
 
-@media (prefers-color-scheme: dark) {
-  html,
-  body {
-    background: #16120c;
-  }
+html[data-theme="dark"] body {
+  background: #16120c;
 }

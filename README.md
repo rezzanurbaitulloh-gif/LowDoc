@@ -2,6 +2,9 @@
 
 **Universal Privacy-First Document Converter** — PWA 100% offline, zero database. Semua file diproses secara ephemeral di browser via WebAssembly. Data terhapus total saat tab ditutup.
 
+## Link
+- lowdoc.vercel.app
+
 ## Stack
 
 - **Next.js 16** (App Router, TypeScript) + **Tailwind CSS v4**
@@ -40,14 +43,6 @@ public/
   sw.js                 # service worker: precache shell, cache-first wasm, network-first nav
   wasm-magick.wasm      # engine ImageMagick (~14MB)
   icons/                # icon PWA (generated)
-```
-
-## Development
-
-```bash
-npm run dev      # localhost:3000
-npm run build    # production build
-npm run lint
 ```
 
 ## Arsitektur Konversi

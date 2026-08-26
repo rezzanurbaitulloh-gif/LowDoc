@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import SiteShell, { Section } from "@/components/lowdoc/site-shell";
+import SuggestionBox from "@/components/lowdoc/suggestion-box";
 import { Coffee, Github, Heart } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -69,6 +70,15 @@ export default function SupportPage() {
         <p className="flex items-center gap-2 text-[var(--ld-text)]">
           <Heart size={15} className="text-[var(--ld-orange)]" /> Thank you for keeping private file tools alive.
         </p>
+      </Section>
+
+      <Section heading="Suggestions & bug reports">
+        <p>
+          Found a bug, want a format added, or have UX feedback? Send it below — no
+          account, no email required. Feedback lives only in your current session
+          (this site keeps zero databases), so copy anything you want to keep.
+        </p>
+        <SuggestionBox />
       </Section>
     </SiteShell>
   );

@@ -12,6 +12,7 @@ import PreviewModal, { type Previewable } from "@/components/lowdoc/preview-moda
 import {
   consoleBus,
   downloadTaskOutput,
+  downloadAllAsZip,
   officeAvailable,
   runBatch,
   runCompress,
@@ -24,7 +25,9 @@ import {
 } from "@/lib/lowdoc/pipeline";
 import { parseRanges } from "@/lib/lowdoc/pdf-toolkit";
 import PaperSelector, { type SelectedPaper } from "@/components/lowdoc/paper-selector";
+import Diagnostics from "@/components/lowdoc/diagnostics";
 import { mmToTwips } from "@/lib/lowdoc/paper";
+import { recommendAuto } from "@/lib/lowdoc/auto";
 import type { ToolkitOp } from "@/components/lowdoc/pdf-toolkit";
 
 type Mode = "convert" | "tools";
@@ -41,6 +44,8 @@ export default function LowDocPage() {
   const [consoleLines, setConsoleLines] = useState<ConsoleMessage[]>([]);
   const [previewItem, setPreviewItem] = useState<Previewable | null>(null);
   const [paper, setPaper] = useState<SelectedPaper | null>(null);
+  const [showDiag, setShowDiag] = useState(false);
+  const autoRec = files[0] ? recommendAuto(files[0].name.split(".").pop()?.toLowerCase() ?? "") : null;
 
   useEffect(() => {
     const unsub = consoleBus.subscribe((m) => {
@@ -231,6 +236,17 @@ export default function LowDocPage() {
       </div>
 
       {mode === "convert" && (
+        <div className="px-5 pt-5 max-w-[1440px] mx-auto">
+          <h1 style={{ fontFamily: "var(--ld-display)" }} className="text-2xl sm:text-3xl font-bold tracking-tight">
+            Private file tools. <span className="text-[var(--ld-orange)]">Built for your browser.</span>
+          </h1>
+          <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--ld-dim)]">
+            Convert · Resize · Compress · Preview · Preserve
+          </p>
+        </div>
+      )}
+
+      {mode === "convert" && (
         <div className="ld-bento px-5 pt-4 pb-2 max-w-[1440px] mx-auto">
           <HeroDropzone
             className="lg:col-span-2 lg:row-span-2"
@@ -270,12 +286,18 @@ export default function LowDocPage() {
               <RefreshCw size={15} className={running ? "animate-spin" : ""} />
               {running ? "Converting…" : `Convert ${files.length > 0 ? `${files.length} file(s)` : ""}`}
             </button>
+            {!target && autoRec && (
+              <p className="mt-2 font-mono text-[10px] uppercase tracking-wider text-[var(--ld-dim)]">
+                AUTO → {autoRec.label} · {autoRec.reason}
+              </p>
+            )}
           </div>
 
           <ConvertQueue
             className="lg:col-span-2"
             tasks={tasks}
             onDownload={(t) => downloadTaskOutput(t)}
+            onDownloadAll={() => downloadAllAsZip(tasks)}
             onRemove={(id) => setTasks((prev) => prev.filter((x) => x.id !== id))}
             onPreview={(t) =>
               setPreviewItem({
@@ -415,9 +437,69 @@ export default function LowDocPage() {
         </div>
       )}
 
+      {mode === "convert" && (
+        <div className="px-5 pt-2 pb-1 max-w-[1440px] mx-auto">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--ld-dim)] mr-1">
+              Popular
+            </span>
+            {[
+              { label: "DOCX → PDF", target: "pdf" },
+              { label: "MD → PDF", target: "pdf" },
+              { label: "JPG → WebP", target: "webp" },
+              { label: "XLSX → CSV", target: "csv" },
+              { label: "PDF → TXT", target: "txt" },
+            ].map((p) => (
+              <button
+                key={p.label}
+                type="button"
+                className="ld-chip"
+                onClick={() => {
+                  setTarget(p.target);
+                  consoleBus.info(`preset: ${p.label}`);
+                }}
+              >
+                {p.label}
+              </button>
+            ))}
+            {[
+              "Compress PDF",
+              "Resize Image",
+              "Merge PDF",
+            ].map((label) => (
+              <button
+                key={label}
+                type="button"
+                className="ld-chip"
+                onClick={() => {
+                  setMode("tools");
+                  consoleBus.info(`preset: ${label} — pick the tool in PDF Tools`);
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              ["Fidelity First", "Layout, fonts and page geometry preserved whenever possible"],
+              ["Local Processing", "WASM engines run on your device — files stay with you"],
+              ["Universal Graph", "Formats route through a conversion graph, not a fixed list"],
+              ["Free Core Tools", "No accounts, no limits, no database"],
+            ].map(([t, d]) => (
+              <div key={t} className="ld-panel-2 !rounded px-3 py-2.5">
+                <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--ld-orange)]">{t}</div>
+                <div className="mt-1 text-xs text-[var(--ld-muted)] leading-snug">{d}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <ConsoleLog lines={consoleLines} />
 
       <PreviewModal item={previewItem} onClose={() => setPreviewItem(null)} />
+      {showDiag && <Diagnostics onClose={() => setShowDiag(false)} />}
 
       <footer className="border-t border-[var(--ld-border)] px-5 py-4 flex flex-wrap items-center justify-between gap-2">
         <span className="font-mono text-[10px] text-[var(--ld-dim)] uppercase tracking-wider">
@@ -439,6 +521,13 @@ export default function LowDocPage() {
               {label}
             </a>
           ))}
+          <button
+            type="button"
+            className="text-[var(--ld-dim)] hover:text-[var(--ld-orange)] uppercase tracking-wider"
+            onClick={() => setShowDiag(true)}
+          >
+            Diagnostics
+          </button>
         </nav>
       </footer>
       <script

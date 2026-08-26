@@ -204,6 +204,30 @@ export async function downloadTaskOutput(task: ConversionTask): Promise<void> {
   a.remove();
 }
 
+/** Batch ZIP output (PRD §36) — bundle every completed task into one archive. */
+export async function downloadAllAsZip(tasks: ConversionTask[], onEvent?: (e: EngineEvent) => void): Promise<void> {
+  const done = tasks.filter((t) => t.status === "done" && t.outputUrl && t.outputName);
+  if (done.length === 0) return;
+  emitConsole("info", `zip: bundling ${done.length} output(s)`);
+  const { zipSync } = await import("fflate");
+  const files: Record<string, Uint8Array> = {};
+  for (const t of done) {
+    const res = await fetch(t.outputUrl!);
+    files[t.outputName!] = new Uint8Array(await res.arrayBuffer());
+  }
+  const bundled = zipSync(files, { level: 6 });
+  const url = URL.createObjectURL(new Blob([bundled as unknown as BlobPart], { type: "application/zip" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `lowdoc-output-${done.length}.zip`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  emitConsole("success", `zip: ${done.length} file(s) → ${formatBytes(bundled.byteLength)}`);
+  if (onEvent) onEvent({ type: "success", message: "zip bundle ready" });
+}
+
 /* ── PDF toolkit ────────────────────────────────────────────────────── */
 
 export async function runMerge(

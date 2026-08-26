@@ -7,12 +7,14 @@ import type { ConversionTask } from "@/lib/lowdoc/pipeline";
 export default function ConvertQueue({
   tasks,
   onDownload,
+  onDownloadAll,
   onRemove,
   onPreview,
   className = "",
 }: {
   tasks: ConversionTask[];
   onDownload: (task: ConversionTask) => void;
+  onDownloadAll?: () => void;
   onRemove: (id: string) => void;
   onPreview: (task: ConversionTask) => void;
   className?: string;
@@ -28,6 +30,11 @@ export default function ConvertQueue({
         <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--ld-dim)]">
           Queue — {tasks.length} task(s) · {done} done · {failed} failed
         </span>
+        {done > 1 && onDownloadAll && (
+          <button type="button" className="ld-chip ld-chip-success" onClick={onDownloadAll}>
+            <Download size={11} /> all (.zip)
+          </button>
+        )}
       </div>
       <div className="divide-y divide-[var(--ld-border)]">
         {tasks.map((t) => (

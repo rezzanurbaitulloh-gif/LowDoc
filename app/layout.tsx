@@ -3,11 +3,29 @@ import "./globals.css";
 import "./lowdoc.css";
 
 export const metadata: Metadata = {
-  title: "LowDoc — Universal Document Converter",
+  metadataBase: new URL("https://lowdoc.vercel.app"),
+  title: {
+    default: "LowDoc — Universal Document Converter",
+    template: "%s",
+  },
   description:
     "Privacy-first document converter. Local-first in-browser conversion via WebAssembly. Zero database — files erased when the tab closes.",
   manifest: "/manifest.webmanifest",
   applicationName: "LowDoc",
+  openGraph: {
+    type: "website",
+    siteName: "LowDoc",
+    url: "https://lowdoc.vercel.app",
+    title: "LowDoc — Universal Document Converter",
+    description:
+      "Convert, resize, compress and preview files privately in your browser. Fidelity-first, no accounts, no database.",
+    images: [{ url: "/brand/og-image.png", width: 1200, height: 630, alt: "LowDoc — private file tools" }],
+  },
+  twitter: {
+    card: "summary",
+    title: "LowDoc — Universal Document Converter",
+    description: "Private file tools. Built for your browser.",
+  },
   icons: {
     icon: [
       { url: "/brand/favicon.ico", sizes: "48x48" },

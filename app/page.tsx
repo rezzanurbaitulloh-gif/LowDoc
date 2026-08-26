@@ -426,7 +426,37 @@ export default function LowDocPage() {
         <span className="font-mono text-[10px] text-[var(--ld-dim)]">
           Zero database · files erased when tab closes
         </span>
+        <nav aria-label="Site" className="flex flex-wrap gap-x-3 gap-y-1 font-mono text-[10px] uppercase tracking-wider">
+          {[
+            ["/about", "About"],
+            ["/faq", "FAQ"],
+            ["/privacy", "Privacy"],
+            ["/terms", "Terms"],
+            ["/licenses", "Licenses"],
+            ["/support", "Support"],
+          ].map(([href, label]) => (
+            <a key={href} href={href} className="text-[var(--ld-dim)] hover:text-[var(--ld-orange)]">
+              {label}
+            </a>
+          ))}
+        </nav>
       </footer>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebApplication",
+            name: "LowDoc",
+            url: "https://lowdoc.vercel.app",
+            applicationCategory: "UtilitiesApplication",
+            operatingSystem: "Any (browser)",
+            offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+            description:
+              "Privacy-first universal document converter. Convert, resize, compress and preview files locally in your browser.",
+          }),
+        }}
+      />
     </main>
   );
 }

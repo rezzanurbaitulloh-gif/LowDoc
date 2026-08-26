@@ -8,6 +8,7 @@ export default function ConvertQueue({
   tasks,
   onDownload,
   onDownloadAll,
+  onRetryFailed,
   onRemove,
   onPreview,
   className = "",
@@ -15,6 +16,7 @@ export default function ConvertQueue({
   tasks: ConversionTask[];
   onDownload: (task: ConversionTask) => void;
   onDownloadAll?: () => void;
+  onRetryFailed?: () => void;
   onRemove: (id: string) => void;
   onPreview: (task: ConversionTask) => void;
   className?: string;
@@ -30,6 +32,11 @@ export default function ConvertQueue({
         <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--ld-dim)]">
           Queue — {tasks.length} task(s) · {done} done · {failed} failed
         </span>
+        {failed > 0 && onRetryFailed && (
+          <button type="button" className="ld-chip ld-chip-warn" onClick={onRetryFailed}>
+            retry {failed}
+          </button>
+        )}
         {done > 1 && onDownloadAll && (
           <button type="button" className="ld-chip ld-chip-success" onClick={onDownloadAll}>
             <Download size={11} /> all (.zip)

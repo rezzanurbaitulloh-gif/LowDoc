@@ -82,14 +82,15 @@ export default function LowDocPage() {
     consoleBus.info("queue cleared");
   }, []);
 
-  const handleConvert = useCallback(async () => {
-    if (files.length === 0) return;
+  const handleConvert = useCallback(async (list?: File[]) => {
+    const batch = list ?? files;
+    if (batch.length === 0) return;
     setRunning(true);
-    consoleBus.info(`convert: ${files.length} file(s) → ${target || "auto"}`);
+    consoleBus.info(`convert: ${batch.length} file(s) → ${target || "auto"}`);
     try {
       const paperOpts = paper ? { paper: { w: mmToTwips(paper.w), h: mmToTwips(paper.h) } } : undefined;
       if (paper) consoleBus.info(`paper: ${paper.id} (${paper.w}×${paper.h} mm)`);
-      await runBatch(files, (target || "pdf") as never, (t) => {
+      await runBatch(batch, (target || "pdf") as never, (t) => {
         setTasks((prev) => {
           const i = prev.findIndex((x) => x.id === t.id);
           if (i === -1) return [...prev, t];
@@ -281,7 +282,7 @@ export default function LowDocPage() {
               type="button"
               className="ld-btn ld-btn-orange w-full !py-3 !text-sm"
               disabled={running || files.length === 0}
-              onClick={handleConvert}
+              onClick={() => void handleConvert()}
             >
               <RefreshCw size={15} className={running ? "animate-spin" : ""} />
               {running ? "Converting…" : `Convert ${files.length > 0 ? `${files.length} file(s)` : ""}`}
@@ -298,6 +299,14 @@ export default function LowDocPage() {
             tasks={tasks}
             onDownload={(t) => downloadTaskOutput(t)}
             onDownloadAll={() => downloadAllAsZip(tasks)}
+            onRetryFailed={() => {
+              const failedNames = new Set(tasks.filter((t) => t.status === "error").map((t) => t.name));
+              const retryFiles = files.filter((f) => failedNames.has(f.name));
+              if (retryFiles.length === 0) return;
+              consoleBus.info(`retry: ${retryFiles.length} failed task(s)`);
+              setTasks((prev) => prev.filter((t) => !failedNames.has(t.name)));
+              void handleConvert(retryFiles);
+            }}
             onRemove={(id) => setTasks((prev) => prev.filter((x) => x.id !== id))}
             onPreview={(t) =>
               setPreviewItem({

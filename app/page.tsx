@@ -23,6 +23,8 @@ import {
   type PdfToolkitTask,
 } from "@/lib/lowdoc/pipeline";
 import { parseRanges } from "@/lib/lowdoc/pdf-toolkit";
+import PaperSelector, { type SelectedPaper } from "@/components/lowdoc/paper-selector";
+import { mmToTwips } from "@/lib/lowdoc/paper";
 import type { ToolkitOp } from "@/components/lowdoc/pdf-toolkit";
 
 type Mode = "convert" | "tools";
@@ -38,6 +40,7 @@ export default function LowDocPage() {
   const [officeVersion, setOfficeVersion] = useState<string | undefined>();
   const [consoleLines, setConsoleLines] = useState<ConsoleMessage[]>([]);
   const [previewItem, setPreviewItem] = useState<Previewable | null>(null);
+  const [paper, setPaper] = useState<SelectedPaper | null>(null);
 
   useEffect(() => {
     const unsub = consoleBus.subscribe((m) => {
@@ -79,6 +82,8 @@ export default function LowDocPage() {
     setRunning(true);
     consoleBus.info(`convert: ${files.length} file(s) → ${target || "auto"}`);
     try {
+      const paperOpts = paper ? { paper: { w: mmToTwips(paper.w), h: mmToTwips(paper.h) } } : undefined;
+      if (paper) consoleBus.info(`paper: ${paper.id} (${paper.w}×${paper.h} mm)`);
       await runBatch(files, (target || "pdf") as never, (t) => {
         setTasks((prev) => {
           const i = prev.findIndex((x) => x.id === t.id);
@@ -87,11 +92,11 @@ export default function LowDocPage() {
           next[i] = t;
           return next;
         });
-      });
+      }, paperOpts);
     } finally {
       setRunning(false);
     }
-  }, [files, target]);
+  }, [files, target, paper]);
 
   const handleToolkitRun = useCallback(
     async (
@@ -221,7 +226,7 @@ export default function LowDocPage() {
         </div>
         <div className="ml-auto hidden sm:flex items-center gap-2 font-mono text-[10px] text-[var(--ld-dim)] uppercase tracking-wider">
           <ShieldCheck size={12} className="text-[var(--ld-ok)]" />
-          100% offline · no uploads
+          local-first · no accounts · no cloud
         </div>
       </div>
 
@@ -237,6 +242,7 @@ export default function LowDocPage() {
           <ControlBar
             className="lg:col-span-2"
             selectedFormat={target}
+            srcExt={files[0]?.name.split(".").pop()?.toLowerCase()}
             onFormatChange={(k) => {
               setTarget(k);
               consoleBus.info(`target format → ${k || "auto (pdf)"}`);
@@ -244,6 +250,15 @@ export default function LowDocPage() {
             onClear={handleClear}
             fileCount={files.length}
           />
+
+          {(target === "pdf" || target === "") && (
+            <div className="lg:col-span-2 flex flex-wrap items-center gap-3 -mt-1">
+              <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--ld-dim)]">
+                Paper (pdf)
+              </span>
+              <PaperSelector value={paper} onChange={setPaper} />
+            </div>
+          )}
 
           <div className="lg:col-span-2">
             <button

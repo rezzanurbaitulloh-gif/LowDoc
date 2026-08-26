@@ -1,7 +1,7 @@
 "use client";
 
 import { CATEGORY_LABELS, CATEGORY_ORDER, FORMATS } from "@/lib/lowdoc/formats";
-import { OUTPUT_GROUPS, TARGET_LABELS } from "@/lib/lowdoc/matrix";
+import { OUTPUT_GROUPS, TARGET_LABELS, findPath, getCapability, CAP_LABELS } from "@/lib/lowdoc/matrix";
 
 const INPUT_EXTENSIONS = [
   "docx", "doc", "docm", "dotx", "odt", "rtf", "txt",
@@ -19,14 +19,23 @@ export default function ControlBar({
   onFormatChange,
   onClear,
   fileCount,
+  srcExt,
   className = "",
 }: {
   selectedFormat: string;
   onFormatChange: (key: string) => void;
   onClear: () => void;
   fileCount: number;
+  srcExt?: string;
   className?: string;
 }) {
+  const cap = srcExt && selectedFormat ? getCapability(srcExt, selectedFormat) : null;
+  const needsServer = (t: string) => {
+    if (!srcExt) return false;
+    const p = findPath(srcExt, t);
+    return !!p && p.some((h) => h.engine === "office");
+  };
+
   return (
     <section className={`ld-card ${className}`}>
       {/* output groups */}
@@ -55,10 +64,12 @@ export default function ControlBar({
                 <button
                   key={t}
                   type="button"
+                  title={needsServer(t) ? "Requires the self-hosted office helper" : undefined}
                   className={`ld-chip ${selectedFormat === t ? "ld-chip-selected" : ""}`}
                   onClick={() => onFormatChange(t)}
                 >
                   {TARGET_LABELS[t]}
+                  {needsServer(t) && selectedFormat === t && <span className="opacity-70">⌂</span>}
                 </button>
               ))}
             </div>
@@ -74,6 +85,19 @@ export default function ControlBar({
           </button>
         )}
       </div>
+
+      {cap && (
+        <div className="mt-3 flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-wider">
+          <span className="ld-chip !cursor-default ld-chip-success">{CAP_LABELS[cap.status]}</span>
+          <span
+            className={`ld-chip !cursor-default ${cap.local ? "ld-chip-success" : "ld-chip-warn"}`}
+            title={cap.local ? "Runs entirely in your browser" : "Uses the self-hosted office helper (LibreOffice)"}
+          >
+            {cap.local ? "100% local" : "server-assisted ⌂"}
+          </span>
+          <span className="text-[var(--ld-dim)] normal-case">{cap.note}</span>
+        </div>
+      )}
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--ld-dim)] mr-1">

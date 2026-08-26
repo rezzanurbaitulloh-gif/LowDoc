@@ -21,9 +21,9 @@
   --ld-text: #211b10;
   --ld-muted: #5d5340;
   --ld-dim: #98896c;
-  --ld-accent: #bc4a10;
-  --ld-accent-soft: rgba(188, 74, 16, 0.09);
-  --ld-orange: #bc4a10;
+  --ld-accent: #d76a1c;
+  --ld-accent-soft: rgba(215, 106, 28, 0.1);
+  --ld-orange: #d76a1c;
   --ld-green: #3e7040;
   --ld-red: #a83a26;
   --ld-yellow: #97701a;
@@ -52,9 +52,9 @@ html[data-theme="dark"] .lowdoc {
     --ld-text: #f1e9d8;
     --ld-muted: #b4a78b;
     --ld-dim: #7e7156;
-    --ld-accent: #e08138;
-    --ld-accent-soft: rgba(224, 129, 56, 0.13);
-    --ld-orange: #e08138;
+    --ld-accent: #f2a25c;
+    --ld-accent-soft: rgba(242, 162, 92, 0.16);
+    --ld-orange: #f2a25c;
     --ld-green: #7fbf72;
     --ld-red: #e08573;
     --ld-yellow: #d8b45a;
@@ -565,6 +565,6 @@ html[data-theme="dark"] .ld-console {
 }
 
 .lowdoc ::selection {
-  background: rgba(188, 74, 16, 0.24);
+  background: rgba(215, 106, 28, 0.26);
   color: var(--ld-text);
 }

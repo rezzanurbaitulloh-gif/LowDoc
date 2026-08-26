@@ -13,6 +13,7 @@
     "@ducanh2912/next-pwa": "^10.2.9",
     "@imagemagick/magick-wasm": "^0.0.42",
     "dxf-parser": "^1.1.2",
+    "fflate": "^0.8.3",
     "idb": "^8.0.3",
     "lucide-react": "^0.462.0",
     "mammoth": "^1.12.1",

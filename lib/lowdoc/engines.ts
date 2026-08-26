@@ -649,11 +649,17 @@ async function runEngine(
   }
 }
 
+export interface ConversionOptions {
+  /** target paper size in twips — applied to docx before the office→pdf hop */
+  paper?: { w: number; h: number };
+}
+
 export async function runConversion(
   inputName: string,
   inputBytes: Uint8Array,
   target: LowDocTarget,
   onEvent?: EngineEventHandler,
+  opts?: ConversionOptions,
 ): Promise<Uint8Array> {
   const ext = inputExtension(inputName);
   const base = inputName.replace(/\.[^.]+$/, "");
@@ -666,6 +672,11 @@ export async function runConversion(
   const direct = pickEngine(ext, target);
   if (direct) {
     emit(onEvent, { type: "info", message: `dispatch: ${inputName} (${ext}) → ${target} via ${direct}` });
+    if (direct === "office" && opts?.paper && ext === "docx") {
+      const { patchDocxPaperSize } = await import("./paper-patch");
+      inputBytes = patchDocxPaperSize(inputBytes, { w: opts.paper.w, h: opts.paper.h });
+      emit(onEvent, { type: "info", message: `paper: page size set to ${Math.round(opts.paper.w / 56.6929)}×${Math.round(opts.paper.h / 56.6929)} mm` });
+    }
     return runEngine(direct, inputName, inputBytes, target, onEvent);
   }
 
@@ -681,6 +692,11 @@ export async function runConversion(
   let currentExt = ext;
   for (const hop of path) {
     const hopName = `${base}.${currentExt}`;
+    if (hop.engine === "office" && opts?.paper && currentExt === "docx") {
+      const { patchDocxPaperSize } = await import("./paper-patch");
+      data = patchDocxPaperSize(data, { w: opts.paper.w, h: opts.paper.h });
+      emit(onEvent, { type: "info", message: `paper: page size set to ${Math.round(opts.paper.w / 56.6929)}×${Math.round(opts.paper.h / 56.6929)} mm` });
+    }
     data = await runEngine(hop.engine, hopName, data, hop.via as LowDocTarget, onEvent);
     currentExt = hop.via;
   }

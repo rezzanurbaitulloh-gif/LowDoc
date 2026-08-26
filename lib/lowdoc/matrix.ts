@@ -480,3 +480,63 @@ export function findPath(from: string, to: string): Hop[] | null {
   }
   return null;
 }
+/* ── capability states (PRD §8) ─────────────────────────────────────── */
+
+export type Capability = "high" | "supported" | "limited" | "experimental";
+
+export interface CapabilityInfo {
+  status: Capability;
+  note: string;
+  /** true when the whole path runs in-browser (no server hop) */
+  local: boolean;
+}
+
+const ENGINE_CAP: Record<LowDocEngine, { cap: Capability; note: string }> = {
+  pandoc: { cap: "high", note: "Structure-preserving text conversion" },
+  sheets: { cap: "high", note: "Spreadsheet data preserved" },
+  pdflib: { cap: "supported", note: "PDF page operations" },
+  mammoth: { cap: "limited", note: "Semantic HTML from DOCX — visual layout not preserved" },
+  office: { cap: "high", note: "Full layout via LibreOffice" },
+  magick: { cap: "supported", note: "Raster image conversion" },
+  pdfjs: { cap: "limited", note: "Pages rendered as image — text not selectable" },
+  pdftext: { cap: "limited", note: "Text layer only — layout not preserved" },
+  bridge: { cap: "supported", note: "Intermediate re-encode" },
+  dxf: { cap: "experimental", note: "Experimental CAD support" },
+};
+
+const CAP_RANK: Record<Capability, number> = { high: 3, supported: 2, limited: 1, experimental: 0 };
+export const CAP_LABELS: Record<Capability, string> = {
+  high: "High Fidelity",
+  supported: "Supported",
+  limited: "Limited",
+  experimental: "Experimental",
+};
+
+const PAIR_OVERRIDES: Record<string, { cap: Capability; note: string }> = {
+  "pdf:docx": { cap: "limited", note: "Structural reconstruction — layout may shift" },
+  "pdf:html": { cap: "limited", note: "Reconstructed structure, not original markup" },
+  "json:pdf": { cap: "limited", note: "Plain-JSON fallback renders as text listing" },
+};
+
+export function getCapability(src: string, tgt: string): CapabilityInfo | null {
+  const path = findPath(src, tgt);
+  if (!path) return null;
+  const override = PAIR_OVERRIDES[`${src}:${tgt}`];
+  const local = !path.some((h) => h.engine === "office");
+
+  if (override) return { status: override.cap, note: override.note, local };
+  if (path.length === 1 && path[0].engine === "bridge" && src === tgt)
+    return { status: "high", note: "Direct copy", local: true };
+
+  let worst: Capability = "high";
+  let worstNote = "";
+  for (const hop of path) {
+    const e = ENGINE_CAP[hop.engine];
+    if (CAP_RANK[e.cap] < CAP_RANK[worst]) {
+      worst = e.cap;
+      worstNote = e.note;
+    }
+  }
+  if (!worstNote) worstNote = ENGINE_CAP[path[0].engine].note;
+  return { status: worst, note: worstNote, local };
+}

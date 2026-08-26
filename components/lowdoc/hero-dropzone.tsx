@@ -46,7 +46,7 @@ export default function HeroDropzone({
           Drop files here or <span className="text-[var(--ld-orange)] font-semibold underline decoration-solid underline-offset-4">browse</span>
         </div>
         <div className="font-mono text-[10px] text-[var(--ld-dim)] uppercase tracking-wider">
-          Converted in your browser — files never leave your device
+          Local-first conversion · office formats use your self-hosted helper
         </div>
         <input
           ref={inputRef}

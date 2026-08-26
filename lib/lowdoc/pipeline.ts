@@ -10,6 +10,7 @@ import {
   type EngineEvent,
 } from "./engines";
 import { pickEngine, findPath, type LowDocTarget } from "./matrix";
+import { checkFormat } from "./magic";
 import { saveHistory, type HistoryRecord } from "./storage";
 
 /* ── console bus ────────────────────────────────────────────────────── */
@@ -94,15 +95,44 @@ export async function runConversion(
   file: File,
   target: LowDocTarget,
   onEvent?: (e: EngineEvent) => void,
+  opts?: { paper?: { w: number; h: number } },
 ): Promise<{ data: Uint8Array; engine: string }> {
+  emitConsole("info", `Loading file (${formatBytes(file.size)})`);
   const bytes = new Uint8Array(await file.arrayBuffer());
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  emitConsole("info", "Detecting format");
+  const check = checkFormat(file.name, bytes);
+  let ext = check.ext;
+  if (check.verdict === "mismatch") {
+    emitConsole(
+      "warn",
+      `Extension ".${check.ext}" does not match content signature${check.detected ? ` (${check.detected})` : ""} — using extension`,
+    );
+  } else if (check.verdict === "zip-family") {
+    emitConsole("info", `Container verified (zip family: .${ext})`);
+  } else if (check.verdict === "match") {
+    emitConsole("info", `Signature verified (.${ext})`);
+  }
+  if (!findPath(ext, target) && check.detected && check.detected !== "zip" && findPath(check.detected, target)) {
+    emitConsole("warn", `No route ".${ext}" → ${target}; retrying as ${check.detected}`);
+    ext = check.detected;
+  }
   const path = findPath(ext, target);
-  const engine = pickEngine(ext, target) ?? path?.[0]?.engine ?? "unknown";
-  const data = await engineRunConversion(file.name, bytes, target, (e) => {
-    if (onEvent) onEvent(e);
-    emitConsole(e.type, e.message);
-  });
+  if (!path) throw new Error(`No conversion route from .${ext} to ${target}`);
+  emitConsole("info", `Route: ${path.map((h) => h.engine).join(" → ")}`);
+  const engine = pickEngine(ext, target) ?? path[0].engine;
+  emitConsole("info", "Initializing engine");
+  const data = await engineRunConversion(
+    ext === check.ext ? file.name : file.name.replace(/\.[^.]+$/, "." + ext),
+    bytes,
+    target,
+    (e) => {
+      if (e.type === "progress") emitConsole("info", "Converting");
+      if (onEvent) onEvent(e);
+      emitConsole(e.type, e.message);
+    },
+    opts,
+  );
+  emitConsole("success", `Complete (${formatBytes(data.byteLength)})`);
   return { data, engine };
 }
 
@@ -110,6 +140,7 @@ export async function runBatch(
   files: File[],
   target: LowDocTarget,
   onProgress: (task: ConversionTask) => void,
+  opts?: { paper?: { w: number; h: number } },
 ): Promise<void> {
   const ext = files[0]?.name.split(".").pop()?.toLowerCase() ?? "";
   const path = findPath(ext, target);
@@ -137,7 +168,7 @@ export async function runBatch(
           t.progress = 0.1 + (e.progress ?? 0) * 0.85;
           onProgress({ ...t });
         }
-      });
+      }, opts);
       t.engine = usedEngine;
       t.status = "done";
       t.progress = 1;

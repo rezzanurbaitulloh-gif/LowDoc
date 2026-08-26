@@ -73,6 +73,8 @@ export interface ConversionTask {
   outputUrl?: string;
   outputSize?: number;
   error?: string;
+  fidelityLine?: string;
+  fidelityVerdict?: "match" | "changed" | "unknown";
 }
 
 export interface PdfToolkitTask {

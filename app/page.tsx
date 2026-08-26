@@ -26,8 +26,10 @@ import {
 import { parseRanges } from "@/lib/lowdoc/pdf-toolkit";
 import PaperSelector, { type SelectedPaper } from "@/components/lowdoc/paper-selector";
 import Diagnostics from "@/components/lowdoc/diagnostics";
+import HistoryPanel from "@/components/lowdoc/history-panel";
 import { mmToTwips } from "@/lib/lowdoc/paper";
 import { recommendAuto } from "@/lib/lowdoc/auto";
+import { analyzeFile, describeAnalysis, compareAnalyses } from "@/lib/lowdoc/analyzer";
 import type { ToolkitOp } from "@/components/lowdoc/pdf-toolkit";
 
 type Mode = "convert" | "tools";
@@ -45,6 +47,7 @@ export default function LowDocPage() {
   const [previewItem, setPreviewItem] = useState<Previewable | null>(null);
   const [paper, setPaper] = useState<SelectedPaper | null>(null);
   const [showDiag, setShowDiag] = useState(false);
+  const [analyses, setAnalyses] = useState<Record<string, import("@/lib/lowdoc/analyzer").FileAnalysis | null>>({});
   const autoRec = files[0] ? recommendAuto(files[0].name.split(".").pop()?.toLowerCase() ?? "") : null;
 
   useEffect(() => {
@@ -70,6 +73,13 @@ export default function LowDocPage() {
       const seen = new Set(prev.map((f) => f.name));
       return [...prev, ...incoming.filter((f) => !seen.has(f.name))];
     });
+    for (const f of incoming) {
+      void analyzeFile(f).then((a) => {
+        setAnalyses((prev) => ({ ...prev, [f.name]: a }));
+        const desc = describeAnalysis(a);
+        if (desc) consoleBus.info(`analyze: ${f.name} — ${desc}`);
+      });
+    }
   }, []);
 
   const handleRemoveFile = useCallback((name: string) => {
@@ -98,6 +108,24 @@ export default function LowDocPage() {
           next[i] = t;
           return next;
         });
+        if (t.status === "done" && t.outputUrl && !t.fidelityLine) {
+          const ext = (t.outputName ?? "").split(".").pop()?.toLowerCase() ?? "";
+          if (["pdf", "png", "jpg", "jpeg", "webp", "gif", "bmp"].includes(ext)) {
+            void (async () => {
+              try {
+                const blob = await (await fetch(t.outputUrl!)).blob();
+                const { analyzeBlob } = await import("@/lib/lowdoc/analyzer");
+                const outA = await analyzeBlob(blob, t.outputName ?? "out");
+                const rep = compareAnalyses(analyses[t.name] ?? null, outA);
+                if (rep.line) {
+                  setTasks((prev) => prev.map((x) => (x.id === t.id ? { ...x, fidelityLine: rep.line, fidelityVerdict: rep.verdict } : x)));
+                }
+              } catch {
+                /* fidelity check is best-effort */
+              }
+            })();
+          }
+        }
       }, paperOpts);
     } finally {
       setRunning(false);
@@ -254,6 +282,7 @@ export default function LowDocPage() {
             onFiles={handleFiles}
             onRemoveFile={handleRemoveFile}
             files={files}
+            analyses={analyses}
           />
 
           <ControlBar
@@ -506,6 +535,8 @@ export default function LowDocPage() {
       )}
 
       <ConsoleLog lines={consoleLines} />
+
+      <HistoryPanel />
 
       <PreviewModal item={previewItem} onClose={() => setPreviewItem(null)} />
       {showDiag && <Diagnostics onClose={() => setShowDiag(false)} />}

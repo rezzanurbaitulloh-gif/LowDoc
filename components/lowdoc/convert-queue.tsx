@@ -76,6 +76,20 @@ export default function ConvertQueue({
                   → {t.outputName} ({formatBytes(t.outputSize ?? 0)})
                 </div>
               )}
+              {t.status === "done" && t.fidelityLine && (
+                <div
+                  className={`font-mono text-[10px] mt-0.5 ${
+                    t.fidelityVerdict === "match"
+                      ? "text-[var(--ld-ok)]"
+                      : t.fidelityVerdict === "changed"
+                        ? "text-[var(--ld-yellow)]"
+                        : "text-[var(--ld-dim)]"
+                  }`}
+                >
+                  {t.fidelityVerdict === "match" ? "✓ " : t.fidelityVerdict === "changed" ? "⚠ " : "· "}
+                  {t.fidelityLine}
+                </div>
+              )}
               {t.status === "error" && (
                 <div className="flex items-center gap-1 font-mono text-[10px] text-[var(--ld-err)] mt-0.5">
                   <TriangleAlert size={10} />

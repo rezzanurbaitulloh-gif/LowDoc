@@ -370,7 +370,7 @@ async function runPdfText(
   return new TextEncoder().encode(text);
 }
 
-async function ensurePdfJs(): Promise<void> {
+export async function ensurePdfJs(): Promise<void> {
   if (pdfjsReady) return;
   const pdfjsLib = await import("pdfjs-dist");
   pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";

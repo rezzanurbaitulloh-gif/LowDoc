@@ -43,7 +43,7 @@ export default function HeroDropzone({
         onDrop={handleDrop}
       >
         <div className="ld-dropzone-icon">
-          <FileUp size={28} strokeWidth={1.5} />
+          <FileUp size={28} strokeWidth={1.5} aria-hidden="true" />
         </div>
         <div className="text-sm text-[var(--ld-muted)]">
           Drop files here or <span className="text-[var(--ld-orange)] font-semibold underline decoration-solid underline-offset-4">browse</span>
@@ -51,11 +51,14 @@ export default function HeroDropzone({
         <div className="font-mono text-[10px] text-[var(--ld-dim)] uppercase tracking-wider">
           Local-first conversion · office formats use your self-hosted helper
         </div>
+        <label htmlFor="file-upload" className="sr-only">Upload files</label>
         <input
+          id="file-upload"
           ref={inputRef}
           type="file"
           multiple
           className="hidden"
+          aria-label="Upload files"
           onChange={(e) => {
             const picked = Array.from(e.target.files ?? []);
             if (picked.length) onFiles(picked);

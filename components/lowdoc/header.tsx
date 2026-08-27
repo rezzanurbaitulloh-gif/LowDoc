@@ -40,11 +40,11 @@ export default function Header({
         >
           {officeOnline ? (
             <>
-              <FileDown size={12} /> LO {officeVersion ?? ""}
+              <FileDown size={12} aria-hidden="true" /> LO {officeVersion ?? ""}
             </>
           ) : (
             <>
-              <WifiOff size={12} /> LO offline
+              <WifiOff size={12} aria-hidden="true" /> LO offline
             </>
           )}
         </span>

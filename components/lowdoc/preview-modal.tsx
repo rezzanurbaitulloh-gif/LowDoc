@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Eye, FileText, X } from "lucide-react";
 
 const PAPER_FORMATS: Record<string, { w: number; h: number }> = {
@@ -85,6 +85,22 @@ export default function PreviewModal({
   item: Previewable | null;
   onClose: () => void;
 }) {
+  const modalRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (modalRef.current) {
+      previousFocusRef.current = document.activeElement as HTMLElement;
+      modalRef.current.focus();
+    }
+    return () => {
+      previousFocusRef.current?.focus();
+    };
+  }, []);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Escape") onClose();
+  };
   const [paper, setPaper] = useState("A4");
   const [pages, setPages] = useState<PdfPage[] | null>(null);
   const [imageData, setImageData] = useState<string | null>(null);
@@ -172,13 +188,19 @@ export default function PreviewModal({
       onClick={onClose}
     >
       <div
+        ref={modalRef}
         className="ld-panel w-full max-w-4xl max-h-[92vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Preview"
+        tabIndex={-1}
+        onKeyDown={handleKeyDown}
       >
         {/* header */}
         <div className="flex items-center justify-between gap-3 border-b border-[var(--ld-border)] px-4 py-3">
           <div className="flex items-center gap-2 min-w-0">
-            <Eye size={15} className="text-[var(--ld-orange)] shrink-0" />
+            <Eye size={15} className="text-[var(--ld-orange)] shrink-0" aria-hidden="true" />
             <span className="font-mono text-xs text-[var(--ld-text)] truncate">
               {item.outputName ?? "Preview"}
             </span>
@@ -197,8 +219,8 @@ export default function PreviewModal({
                 </button>
               ))}
             </div>
-            <button type="button" className="ld-btn ld-btn-ghost !px-2 !py-1" onClick={onClose}>
-              <X size={14} />
+            <button type="button" className="ld-btn ld-btn-ghost !px-2 !py-1" onClick={onClose} aria-label="Close preview">
+              <X size={14} aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -278,7 +300,7 @@ export default function PreviewModal({
           {textContent !== null && (
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-2 font-mono text-[10px] text-[var(--ld-dim)] uppercase tracking-wider">
-                <FileText size={12} />
+                <FileText size={12} aria-hidden="true" />
                 Text content
               </div>
               <pre className="ld-console p-3 whitespace-pre-wrap break-words text-xs text-[var(--ld-muted)] max-h-[60vh] overflow-y-auto">

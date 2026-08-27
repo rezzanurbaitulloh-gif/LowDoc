@@ -44,7 +44,7 @@ export default function HistoryPanel() {
     return (
       <div className="px-5 pb-3 max-w-[1440px] mx-auto">
         <button type="button" className="ld-chip" onClick={() => setOpen(true)}>
-          <Clock size={11} /> local history
+          <Clock size={11} aria-hidden="true" /> local history
         </button>
       </div>
     );
@@ -74,7 +74,7 @@ export default function HistoryPanel() {
               }}
               aria-label="Clear history"
             >
-              <Trash2 size={11} /> clear
+              <Trash2 size={11} aria-hidden="true" /> clear
             </button>
             <button type="button" className="ld-chip" onClick={() => setOpen(false)}>
               hide

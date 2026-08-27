@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Activity, X } from "lucide-react";
 
 interface Row {
@@ -70,6 +70,8 @@ async function probe(): Promise<Row[]> {
 
 export default function Diagnostics({ onClose }: { onClose: () => void }) {
   const [rows, setRows] = useState<Row[] | null>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -81,20 +83,38 @@ export default function Diagnostics({ onClose }: { onClose: () => void }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (modalRef.current) {
+      previousFocusRef.current = document.activeElement as HTMLElement;
+      modalRef.current.focus();
+    }
+    return () => {
+      previousFocusRef.current?.focus();
+    };
+  }, []);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Escape") onClose();
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div
+        ref={modalRef}
         className="ld-card w-full max-w-md !bg-[var(--ld-panel)]"
         role="dialog"
+        aria-modal="true"
         aria-label="LowDoc diagnostics"
+        tabIndex={-1}
+        onKeyDown={handleKeyDown}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="ld-card-title">
           <span className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-[var(--ld-dim)]">
-            <Activity size={13} /> LowDoc Diagnostics
+            <Activity size={13} aria-hidden="true" /> LowDoc Diagnostics
           </span>
           <button type="button" className="ld-btn ld-btn-ghost !px-2 !py-1" onClick={onClose} aria-label="Close diagnostics">
-            <X size={14} />
+            <X size={14} aria-hidden="true" />
           </button>
         </div>
         <ul className="divide-y divide-[var(--ld-border)] font-mono text-xs">

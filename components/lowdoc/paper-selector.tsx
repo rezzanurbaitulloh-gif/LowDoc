@@ -71,8 +71,10 @@ export default function PaperSelector({
       {open && (
         <div className="ld-panel absolute z-30 mt-2 w-full max-w-sm p-3 shadow-[var(--ld-press)]">
           <div className="flex items-center gap-2 border border-[var(--ld-border)] rounded px-2 py-1.5">
-            <Search size={13} className="text-[var(--ld-dim)] shrink-0" />
+            <Search size={13} className="text-[var(--ld-dim)] shrink-0" aria-hidden="true" />
+            <label htmlFor="paper-search" className="sr-only">Search paper sizes</label>
             <input
+              id="paper-search"
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -101,15 +103,19 @@ export default function PaperSelector({
             )}
           </ul>
           <div className="mt-2 flex items-center gap-2">
+            <label htmlFor="custom-width" className="sr-only">Custom width in mm</label>
             <input
+              id="custom-width"
               className="ld-input !w-20"
               placeholder="W mm"
               value={custom.w}
               onChange={(e) => setCustom((c) => ({ ...c, w: e.target.value }))}
               inputMode="decimal"
             />
-            <span className="text-[var(--ld-dim)]">×</span>
+            <span className="text-[var(--ld-dim)]" aria-hidden="true">×</span>
+            <label htmlFor="custom-height" className="sr-only">Custom height in mm</label>
             <input
+              id="custom-height"
               className="ld-input !w-20"
               placeholder="H mm"
               value={custom.h}

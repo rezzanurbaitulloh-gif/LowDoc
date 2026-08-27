@@ -234,7 +234,7 @@ export default function LowDocPage() {
   }, []);
 
   return (
-    <main className="min-h-screen">
+    <main id="main-content" className="min-h-screen">
       <Header officeOnline={officeOnline} officeVersion={officeVersion} />
 
       {/* mode tabs */}
@@ -259,7 +259,7 @@ export default function LowDocPage() {
           ))}
         </div>
         <div className="ml-auto hidden sm:flex items-center gap-2 font-mono text-[10px] text-[var(--ld-dim)] uppercase tracking-wider">
-          <ShieldCheck size={12} className="text-[var(--ld-ok)]" />
+          <ShieldCheck size={12} className="text-[var(--ld-ok)]" aria-hidden="true" />
           local-first · no accounts · no cloud
         </div>
       </div>
@@ -313,7 +313,7 @@ export default function LowDocPage() {
               disabled={running || files.length === 0}
               onClick={() => void handleConvert()}
             >
-              <RefreshCw size={15} className={running ? "animate-spin" : ""} />
+              <RefreshCw size={15} className={running ? "animate-spin" : ""} aria-hidden="true" />
               {running ? "Converting…" : `Convert ${files.length > 0 ? `${files.length} file(s)` : ""}`}
             </button>
             {!target && autoRec && (

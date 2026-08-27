@@ -47,10 +47,10 @@ export default function ConvertQueue({
         {tasks.map((t) => (
           <div key={t.id} className="flex items-center gap-3 py-3">
             <div className="w-5 shrink-0">
-              {t.status === "done" && <CheckCircle2 size={16} className="text-[var(--ld-ok)]" />}
-              {t.status === "error" && <XCircle size={16} className="text-[var(--ld-err)]" />}
+              {t.status === "done" && <CheckCircle2 size={16} className="text-[var(--ld-ok)]" aria-hidden="true" />}
+              {t.status === "error" && <XCircle size={16} className="text-[var(--ld-err)]" aria-hidden="true" />}
               {(t.status === "running" || t.status === "pending") && (
-                <Loader2 size={16} className="text-[var(--ld-info)] animate-spin" />
+                <Loader2 size={16} className="text-[var(--ld-info)] animate-spin" aria-hidden="true" />
               )}
             </div>
             <div className="min-w-0 flex-1">
@@ -92,7 +92,7 @@ export default function ConvertQueue({
               )}
               {t.status === "error" && (
                 <div className="flex items-center gap-1 font-mono text-[10px] text-[var(--ld-err)] mt-0.5">
-                  <TriangleAlert size={10} />
+                  <TriangleAlert size={10} aria-hidden="true" />
                   {t.error}
                 </div>
               )}
@@ -107,7 +107,7 @@ export default function ConvertQueue({
                     title="Preview"
                     aria-label="Preview output"
                   >
-                    <Eye size={13} />
+                    <Eye size={13} aria-hidden="true" />
                   </button>
                   <button
                     type="button"
@@ -116,7 +116,7 @@ export default function ConvertQueue({
                     title="Download"
                     aria-label="Download output"
                   >
-                    <Download size={13} />
+                    <Download size={13} aria-hidden="true" />
                   </button>
                 </>
               )}

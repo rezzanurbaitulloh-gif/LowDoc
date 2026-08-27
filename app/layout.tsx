@@ -56,7 +56,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInit }} />
       </head>
-      <body className="lowdoc">{children}</body>
+      <body className="lowdoc">
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-4 focus:left-4 bg-[var(--ld-orange)] text-white px-4 py-2 rounded font-mono text-sm">
+          Skip to main content
+        </a>
+        {children}
+      </body>
     </html>
   );
 }

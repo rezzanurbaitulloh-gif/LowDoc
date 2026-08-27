@@ -96,7 +96,7 @@ export default function PdfToolkit({
         }}
       >
         <div className="ld-dropzone-icon !w-12 !h-12">
-          <FileUp size={22} strokeWidth={1.5} />
+          <FileUp size={22} strokeWidth={1.5} aria-hidden="true" />
         </div>
         <div className="text-xs text-[var(--ld-muted)]">
           {mode === "merge"
@@ -140,8 +140,9 @@ export default function PdfToolkit({
 
       {mode === "split" && (
         <div className="mt-3">
-          <label className="ld-label">Page ranges (e.g. 1-3, 5, 8-10)</label>
+          <label htmlFor="split-ranges" className="ld-label">Page ranges (e.g. 1-3, 5, 8-10)</label>
           <input
+            id="split-ranges"
             className="ld-input"
             placeholder="1-3, 5, 8-10"
             value={ranges}
@@ -154,7 +155,7 @@ export default function PdfToolkit({
         <div className="mt-4">
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
-              <span className="ld-label !mb-0">Format</span>
+              <span id="img-format-label" className="ld-label !mb-0">Format</span>
               {(["png", "jpg", "webp"] as const).map((f) => (
                 <button
                   key={f}
@@ -169,6 +170,7 @@ export default function PdfToolkit({
           </div>
 
           <div className="mt-4">
+            <label htmlFor="resize-scale" className="ld-label">Resize scale percentage</label>
             <div className="flex items-center justify-between mb-1">
               <span className="font-mono text-[10px] text-[var(--ld-orange)] uppercase tracking-wider">
                 ◀ downgrade
@@ -181,6 +183,7 @@ export default function PdfToolkit({
               </span>
             </div>
             <input
+              id="resize-scale"
               type="range"
               min={5}
               max={400}

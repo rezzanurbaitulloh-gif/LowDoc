@@ -46,7 +46,9 @@ export default function SuggestionBox() {
           </button>
         ))}
       </div>
+      <label htmlFor="suggestion-message" className="sr-only">Your message</label>
       <textarea
+        id="suggestion-message"
         className="ld-input mt-3 min-h-24 resize-y"
         placeholder="Your message (required) — no login, no email needed"
         value={message}
@@ -57,7 +59,9 @@ export default function SuggestionBox() {
         maxLength={2000}
       />
       <div className="mt-2 flex flex-wrap items-center gap-2">
+        <label htmlFor="suggestion-contact" className="sr-only">Contact (optional)</label>
         <input
+          id="suggestion-contact"
           className="ld-input !w-56"
           placeholder="Contact (optional)"
           value={contact}

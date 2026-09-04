@@ -543,10 +543,10 @@ export default function LowDocPage() {
 
       <footer className="border-t border-[var(--ld-border)] px-5 py-4 flex flex-wrap items-center justify-between gap-2">
         <span className="font-mono text-[10px] text-[var(--ld-dim)] uppercase tracking-wider">
-          LowDoc v0.1 — WASM-powered · privacy-first
+          portoja v0.1 — WASM-powered · privacy-first
         </span>
         <span className="font-mono text-[10px] text-[var(--ld-dim)]">
-          Zero database · files erased when tab closes
+          © 2026 portoja. All rights reserved. · Zero database · files erased when tab closes
         </span>
         <nav aria-label="Site" className="flex flex-wrap gap-x-3 gap-y-1 font-mono text-[10px] uppercase tracking-wider">
           {[

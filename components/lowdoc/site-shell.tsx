@@ -58,7 +58,10 @@ export default function SiteShell({
             ))}
           </nav>
           <p className="mt-3 font-mono text-[10px] text-[var(--ld-dim)] uppercase tracking-wider">
-            LowDoc · Private file tools. Built for your browser. · No account · No database · No mandatory upload
+            portoja · Private file tools. Built for your browser. · No account · No database · No mandatory upload
+          </p>
+          <p className="mt-2 font-mono text-[10px] text-[var(--ld-dim)] uppercase tracking-wider">
+            © 2026 portoja. All rights reserved.
           </p>
         </div>
       </footer>

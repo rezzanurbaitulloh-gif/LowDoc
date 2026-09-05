@@ -484,11 +484,19 @@ async function runDxf(
 
 /* ── SheetJS ────────────────────────────────────────────────────────── */
 
+export async function listSheets(inputBytes: Uint8Array): Promise<string[]> {
+  const mod = await import("xlsx");
+  const XLSX = mod.default ?? mod;
+  const wb = XLSX.read(inputBytes.slice(0), { type: "array", bookSheets: true });
+  return wb.SheetNames ?? [];
+}
+
 async function runSheets(
   inputName: string,
   inputBytes: Uint8Array,
   to: LowDocTarget,
   onEvent?: EngineEventHandler,
+  sheet?: string,
 ): Promise<Uint8Array> {
   const mod = await import("xlsx");
   const XLSX = mod.default ?? mod;
@@ -498,10 +506,12 @@ async function runSheets(
     emit(onEvent, { type: "success", message: `sheets: ${inputName} → xlsx` });
     return new Uint8Array(out);
   }
+  const wanted = sheet ? wb.SheetNames.filter((n: string) => n === sheet) : wb.SheetNames;
+  if (wanted.length === 0 && sheet) throw new Error(`sheets: sheet "${sheet}" not found`);
   if (to === "csv" || to === "tsv") {
     const sep = to === "csv" ? "," : "\t";
     const parts: string[] = [];
-    for (const name of wb.SheetNames) {
+    for (const name of wanted) {
       const sheet = wb.Sheets[name];
       if (!sheet) continue;
       const csv = XLSX.utils.sheet_to_csv(sheet, { FS: sep, blankrows: false });
@@ -513,7 +523,7 @@ async function runSheets(
   }
   if (to === "json") {
     const out: Record<string, unknown>[] = [];
-    for (const name of wb.SheetNames) {
+    for (const name of wanted) {
       const sheet = wb.Sheets[name];
       if (!sheet) continue;
       out.push({ sheet: name, rows: XLSX.utils.sheet_to_json(sheet) });
@@ -524,7 +534,7 @@ async function runSheets(
   }
   if (to === "html") {
     const parts: string[] = ["<html><body>"];
-    for (const name of wb.SheetNames) {
+    for (const name of wanted) {
       const sheet = wb.Sheets[name];
       if (!sheet) continue;
       parts.push(`<h2>${name}</h2>`, XLSX.utils.sheet_to_html(sheet));
@@ -622,6 +632,7 @@ async function runEngine(
   inputBytes: Uint8Array,
   target: LowDocTarget,
   onEvent?: EngineEventHandler,
+  opts?: ConversionOptions,
 ): Promise<Uint8Array> {
   switch (engine) {
     case "pandoc":
@@ -637,7 +648,7 @@ async function runEngine(
     case "dxf":
       return runDxf(inputName, inputBytes, target, onEvent);
     case "sheets":
-      return runSheets(inputName, inputBytes, target, onEvent);
+      return runSheets(inputName, inputBytes, target, onEvent, opts?.sheet);
     case "mammoth":
       return runMammoth(inputName, inputBytes, target, onEvent);
     case "office":
@@ -652,6 +663,8 @@ async function runEngine(
 export interface ConversionOptions {
   /** target paper size in twips — applied to docx before the office→pdf hop */
   paper?: { w: number; h: number };
+  /** spreadsheet sheet to export (csv/tsv/json/html); all sheets when omitted */
+  sheet?: string;
 }
 
 export async function runConversion(
@@ -677,7 +690,7 @@ export async function runConversion(
       inputBytes = patchDocxPaperSize(inputBytes, { w: opts.paper.w, h: opts.paper.h });
       emit(onEvent, { type: "info", message: `paper: page size set to ${Math.round(opts.paper.w / 56.6929)}×${Math.round(opts.paper.h / 56.6929)} mm` });
     }
-    return runEngine(direct, inputName, inputBytes, target, onEvent);
+    return runEngine(direct, inputName, inputBytes, target, onEvent, opts);
   }
 
   const path = findPath(ext, target);
@@ -697,7 +710,7 @@ export async function runConversion(
       data = patchDocxPaperSize(data, { w: opts.paper.w, h: opts.paper.h });
       emit(onEvent, { type: "info", message: `paper: page size set to ${Math.round(opts.paper.w / 56.6929)}×${Math.round(opts.paper.h / 56.6929)} mm` });
     }
-    data = await runEngine(hop.engine, hopName, data, hop.via as LowDocTarget, onEvent);
+    data = await runEngine(hop.engine, hopName, data, hop.via as LowDocTarget, onEvent, opts);
     currentExt = hop.via;
   }
   emit(onEvent, { type: "success", message: `route: ${inputName} → ${target} done (${formatBytes(data.byteLength)})` });

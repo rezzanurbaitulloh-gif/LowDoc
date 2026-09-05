@@ -25,6 +25,7 @@ import {
 } from "@/lib/lowdoc/pipeline";
 import { parseRanges, extractPages, deletePages, reorderPages, rotatePages, addWatermark, addPageNumbers, addText } from "@/lib/lowdoc/pdf-toolkit";
 import PaperSelector, { type SelectedPaper } from "@/components/lowdoc/paper-selector";
+import ArchiveToolkit from "@/components/lowdoc/archive-toolkit";
 import Diagnostics from "@/components/lowdoc/diagnostics";
 import HistoryPanel from "@/components/lowdoc/history-panel";
 import { mmToTwips } from "@/lib/lowdoc/paper";
@@ -46,9 +47,36 @@ export default function LowDocPage() {
   const [consoleLines, setConsoleLines] = useState<ConsoleMessage[]>([]);
   const [previewItem, setPreviewItem] = useState<Previewable | null>(null);
   const [paper, setPaper] = useState<SelectedPaper | null>(null);
+  const [sheet, setSheet] = useState<string>("__all__");
+  const [sheetNames, setSheetNames] = useState<string[]>([]);
   const [showDiag, setShowDiag] = useState(false);
   const [analyses, setAnalyses] = useState<Record<string, import("@/lib/lowdoc/analyzer").FileAnalysis | null>>({});
   const autoRec = files[0] ? recommendAuto(files[0].name.split(".").pop()?.toLowerCase() ?? "") : null;
+  const srcExt = files[0]?.name.split(".").pop()?.toLowerCase() ?? "";
+  const showSheets =
+    ["xlsx", "xls", "xlsm", "xlsb", "ods"].includes(srcExt) &&
+    ["csv", "tsv", "json", "html", ""].includes(target);
+
+  useEffect(() => {
+    if (!showSheets || !files[0]) {
+      setSheetNames([]);
+      setSheet("__all__");
+      return;
+    }
+    let alive = true;
+    files[0]
+      .arrayBuffer()
+      .then((buf) => import("@/lib/lowdoc/engines").then((m) => m.listSheets(new Uint8Array(buf))))
+      .then((names) => {
+        if (alive) setSheetNames(names);
+      })
+      .catch(() => {
+        if (alive) setSheetNames([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [files, target]);
 
   useEffect(() => {
     const unsub = consoleBus.subscribe((m) => {
@@ -98,8 +126,16 @@ export default function LowDocPage() {
     setRunning(true);
     consoleBus.info(`convert: ${batch.length} file(s) → ${target || "auto"}`);
     try {
-      const paperOpts = paper ? { paper: { w: mmToTwips(paper.w), h: mmToTwips(paper.h) } } : undefined;
-      if (paper) consoleBus.info(`paper: ${paper.id} (${paper.w}×${paper.h} mm)`);
+      const convOpts: { paper?: { w: number; h: number }; sheet?: string } = {};
+      if (paper) {
+        convOpts.paper = { w: mmToTwips(paper.w), h: mmToTwips(paper.h) };
+        consoleBus.info(`paper: ${paper.id} (${paper.w}×${paper.h} mm)`);
+      }
+      if (sheet !== "__all__") {
+        convOpts.sheet = sheet;
+        consoleBus.info(`sheet: ${sheet}`);
+      }
+      const paperOpts = Object.keys(convOpts).length > 0 ? convOpts : undefined;
       await runBatch(batch, (target || "pdf") as never, (t) => {
         setTasks((prev) => {
           const i = prev.findIndex((x) => x.id === t.id);
@@ -424,6 +460,26 @@ export default function LowDocPage() {
               <PaperSelector value={paper} onChange={setPaper} />
             </div>
           )}
+          {showSheets && sheetNames.length > 1 && (
+            <div className="lg:col-span-2 flex flex-wrap items-center gap-3 -mt-1">
+              <label htmlFor="sheet-select" className="font-mono text-[10px] uppercase tracking-widest text-[var(--ld-dim)]">
+                Sheet
+              </label>
+              <select
+                id="sheet-select"
+                className="ld-select !w-auto"
+                value={sheet}
+                onChange={(e) => setSheet(e.target.value)}
+              >
+                <option value="__all__">All sheets</option>
+                {sheetNames.map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="lg:col-span-2">
             <button
@@ -532,6 +588,9 @@ export default function LowDocPage() {
       {mode === "tools" && (
         <div className="px-5 pt-4 pb-2 max-w-[1440px] mx-auto">
           <PdfToolkit onRun={handleToolkitRun} />
+          <div className="mt-4">
+            <ArchiveToolkit />
+          </div>
           {toolkitTasks.length > 0 && (
             <section className="ld-card mt-4">
               <div className="ld-card-title">

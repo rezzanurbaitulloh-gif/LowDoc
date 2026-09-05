@@ -96,7 +96,7 @@ export async function runConversion(
   file: File,
   target: LowDocTarget,
   onEvent?: (e: EngineEvent) => void,
-  opts?: { paper?: { w: number; h: number } },
+  opts?: { paper?: { w: number; h: number }; sheet?: string },
 ): Promise<{ data: Uint8Array; engine: string }> {
   emitConsole("info", `Loading file (${formatBytes(file.size)})`);
   const bytes = new Uint8Array(await file.arrayBuffer());
@@ -141,7 +141,7 @@ export async function runBatch(
   files: File[],
   target: LowDocTarget,
   onProgress: (task: ConversionTask) => void,
-  opts?: { paper?: { w: number; h: number } },
+  opts?: { paper?: { w: number; h: number }; sheet?: string },
 ): Promise<void> {
   const ext = files[0]?.name.split(".").pop()?.toLowerCase() ?? "";
   const path = findPath(ext, target);

@@ -120,7 +120,7 @@ export async function runConversion(
   const path = findPath(ext, target);
   if (!path) throw new Error(`No conversion route from .${ext} to ${target}`);
   emitConsole("info", `Route: ${path.map((h) => h.engine).join(" → ")}`);
-  const engine = pickEngine(ext, target) ?? path[0].engine;
+  const engine = pickEngine(ext, target) ?? path?.[0]?.engine ?? "passthrough";
   emitConsole("info", "Initializing engine");
   const data = await engineRunConversion(
     ext === check.ext ? file.name : file.name.replace(/\.[^.]+$/, "." + ext),

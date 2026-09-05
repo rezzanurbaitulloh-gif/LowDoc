@@ -741,8 +741,13 @@ export async function runBatch(
     const ext = inputExtension(f.name);
     const direct = pickEngine(ext, target);
     const path = direct ? null : findPath(ext, target);
-    if (!direct && (!path || path.length === 0)) {
+    if (!direct && !path) {
       emit(onEvent, { type: "error", message: `skip ${f.name}: ${ext} → ${target} unsupported` });
+      continue;
+    }
+    if (path && path.length === 0) {
+      emit(onEvent, { type: "info", message: `passthrough: ${f.name} is already .${target}` });
+      await runConversion(f.name, new Uint8Array(await toArrayBuffer(f)), target, onEvent);
       continue;
     }
     const engine = direct ?? path![0].engine;

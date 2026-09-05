@@ -100,6 +100,7 @@ export async function runConversion(
 ): Promise<{ data: Uint8Array; engine: string }> {
   emitConsole("info", `Loading file (${formatBytes(file.size)})`);
   const bytes = new Uint8Array(await file.arrayBuffer());
+  if (bytes.byteLength === 0) throw new Error("empty file — nothing to convert");
   emitConsole("info", "Detecting format");
   const check = checkFormat(file.name, bytes);
   let ext = check.ext;

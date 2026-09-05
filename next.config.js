@@ -12,9 +12,36 @@ const withPWA = require("@ducanh2912/next-pwa").default({
         expiration: { maxEntries: 64, maxAgeSeconds: 30 * 24 * 60 * 60 },
       },
     },
+    {
+      // Tier-2 engines (pandoc 58MB): cached on first use, then fully offline
+      urlPattern: /\/_next\/static\/wasm\/.*\.wasm$/i,
+      handler: "CacheFirst",
+      options: {
+        cacheName: "wasm-engines",
+        expiration: { maxEntries: 8, maxAgeSeconds: 90 * 24 * 60 * 60 },
+      },
+    },
+    {
+      urlPattern: /\/(wasm-magick\.wasm|pdf\.worker\.min\.mjs)$/i,
+      handler: "CacheFirst",
+      options: {
+        cacheName: "wasm-engines",
+        expiration: { maxEntries: 8, maxAgeSeconds: 90 * 24 * 60 * 60 },
+      },
+    },
+    {
+      urlPattern: /\/fonts\/.*\.woff2$/i,
+      handler: "CacheFirst",
+      options: {
+        cacheName: "local-fonts",
+        expiration: { maxEntries: 48, maxAgeSeconds: 365 * 24 * 60 * 60 },
+      },
+    },
   ],
   workboxOptions: {
-    maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
+    // Tier-1 precache at install: shell + pdf worker + magick + fonts (~17MB).
+    // Pandoc (~58MB) stays lazy via runtimeCaching above.
+    maximumFileSizeToCacheInBytes: 20 * 1024 * 1024,
   },
 });
 

@@ -65,8 +65,8 @@ export default function PrivacyPage() {
 
       <Section heading="External services">
         <p>
-          Google Fonts serves the interface typefaces (Fraunces, Archivo, IBM Plex
-          Mono) — your browser contacts Google when loading them. Donations, if you
+          Interface typefaces (Fraunces, Archivo, IBM Plex Mono) ship with the
+          app itself — no font CDN or other third party is contacted. Donations, if you
           choose to make one, are handled by the external donation provider linked on
           the support page; LowDoc never receives documents through it.
         </p>

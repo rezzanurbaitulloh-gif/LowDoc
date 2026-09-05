@@ -333,6 +333,8 @@ const DOCBUILD_PAIRS: [string, LowDocTarget[]][] = [
   ["adoc", ["pdf"]],
   ["json", ["pdf"]],
   ["xml", ["pdf"]],
+  ["odt", ["pdf"]],
+  ["pptx", ["pdf"]],
 ];
 
 const PDFDOCX_PAIRS: [string, LowDocTarget[]][] = [
@@ -553,6 +555,7 @@ export const CAP_LABELS: Record<Capability, string> = {
 };
 
 const PAIR_OVERRIDES: Record<string, { cap: Capability; note: string }> = {
+  "pptx:pdf": { cap: "limited", note: "Slide text extraction — visuals not preserved" },
   "pdf:docx": { cap: "limited", note: "Structural reconstruction — layout may shift" },
   "pdf:html": { cap: "limited", note: "Reconstructed structure, not original markup" },
   "json:pdf": { cap: "limited", note: "Plain-JSON fallback renders as text listing" },

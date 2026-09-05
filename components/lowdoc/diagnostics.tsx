@@ -53,14 +53,31 @@ async function probe(): Promise<Row[]> {
   );
 
   const wasmOk = typeof WebAssembly === "object";
-  rows.push(wasmOk ? ok("PDF Engine", "pdf.js ready") : off("PDF Engine", "blocked"));
-  rows.push(wasmOk ? ok("Image Engine", "ImageMagick wasm") : off("Image Engine", "blocked"));
-  rows.push(wasmOk ? ok("Text Engine", "Pandoc wasm") : off("Text Engine", "blocked"));
+  const cached = (name: string): boolean => {
+    try {
+      return localStorage.getItem(`ld-engine-${name}`) === "cached";
+    } catch {
+      return false;
+    }
+  };
+  const engineRow = (label: string, name: string, tier: string): Row => {
+    if (!wasmOk) return off(label, "blocked");
+    if (!navigator.onLine) return cached(name) ? ok(label, "cached — works offline") : off(label, "not cached — needs internet once");
+    if (tier === "precached") return ok(label, "ready (precached for offline)");
+    return ok(label, "ready (caches on first use for offline)");
+  };
+  rows.push(engineRow("PDF Engine", "pdfjs", "precached"));
+  rows.push(engineRow("Image Engine", "magick", "precached"));
+  rows.push(engineRow("Text Engine", "pandoc", "lazy-cache"));
 
   try {
     const res = await fetch("/api/lowdoc/office/health", { signal: AbortSignal.timeout(6000) });
     const j = await res.json();
-    rows.push(j.status === "ok" ? ok("Office Engine", `LibreOffice ${j.version ?? ""}`) : warn("Office Engine", "helper not responding"));
+    rows.push(
+      j.status === "ok" && j.version !== "static-export"
+        ? ok("Office Engine", `LibreOffice ${j.version ?? ""}`)
+        : warn("Office Engine", "no conversion server in this deployment"),
+    );
   } catch {
     rows.push(warn("Office Engine", "helper unreachable — office routes unavailable"));
   }

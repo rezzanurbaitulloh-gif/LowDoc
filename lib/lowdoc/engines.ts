@@ -196,10 +196,28 @@ export async function convertViaOffice(
 
 let pandocReady = false;
 
+
+function markEngineCached(name: string) {
+  try {
+    localStorage.setItem(`ld-engine-${name}`, "cached");
+  } catch {
+    /* private mode */
+  }
+}
+
+export function engineCached(name: string): boolean {
+  try {
+    return localStorage.getItem(`ld-engine-${name}`) === "cached";
+  } catch {
+    return false;
+  }
+}
+
 async function ensurePandoc(): Promise<void> {
   if (pandocReady) return;
   await import("pandoc-wasm");
   pandocReady = true;
+  markEngineCached("pandoc");
 }
 
 export async function runPandoc(
@@ -283,6 +301,7 @@ async function ensureMagick(): Promise<void> {
   if (!res.ok) throw new Error(`magick: failed to load /wasm-magick.wasm (${res.status})`);
   await initializeImageMagick(await res.arrayBuffer());
   magickReady = true;
+  markEngineCached("magick");
 }
 
 const MAGICK_FORMAT_BY_EXT: Record<string, string> = {
@@ -382,6 +401,7 @@ export async function ensurePdfJs(): Promise<void> {
   const pdfjsLib = await import("pdfjs-dist");
   pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
   pdfjsReady = true;
+  markEngineCached("pdfjs");
 }
 
 async function runPdfJs(
@@ -648,13 +668,22 @@ async function runDocbuild(
   onEvent?: EngineEventHandler,
   opts?: ConversionOptions,
 ): Promise<Uint8Array> {
-  const { docxToPdf, xlsxToPdf, textToPdf, csvToPdf, htmlToPdf } = await import("./docbuild");
+  const { docxToPdf, xlsxToPdf, textToPdf, csvToPdf, htmlToPdf, renderPdf } = await import("./docbuild");
   const ext = inputExtension(inputName);
   const paper =
     opts?.paper != null
       ? { w: Math.round(opts.paper.w / 56.6929), h: Math.round(opts.paper.h / 56.6929) }
       : undefined;
   const emit = onEvent ? (t: string, m: string) => onEvent({ type: t as "info", message: m }) : undefined;
+  const paperMm = paper ?? { w: 210, h: 297 };
+  if (ext === "odt") {
+    const { renderOdtToPdf } = await import("./odfbuild");
+    return renderOdtToPdf(inputBytes, paperMm, renderPdf, emit);
+  }
+  if (ext === "pptx") {
+    const { renderPptxToPdf } = await import("./odfbuild");
+    return renderPptxToPdf(inputBytes, paperMm, renderPdf, emit);
+  }
   if (ext === "docx" || ext === "docm" || ext === "dotx") return docxToPdf(inputBytes, paper, emit);
   if (ext === "xlsx" || ext === "xls" || ext === "xlsm" || ext === "xlsb" || ext === "ods")
     return xlsxToPdf(inputBytes, opts?.sheet, paper, emit);

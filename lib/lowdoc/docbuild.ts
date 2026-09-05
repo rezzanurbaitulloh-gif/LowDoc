@@ -367,7 +367,7 @@ function renderTable(ctx: Ctx, rows: string[][], header: boolean, CW: number) {
   paraGap(ctx, 10);
 }
 
-async function renderPdf(blocks: Block[], paper: PaperMm): Promise<Uint8Array> {
+export async function renderPdf(blocks: Block[], paper: PaperMm): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   const fonts = {
     r: await doc.embedFont(StandardFonts.Helvetica),

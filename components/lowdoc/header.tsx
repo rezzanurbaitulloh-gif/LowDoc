@@ -1,6 +1,7 @@
 "use client";
 
-import { FileDown, WifiOff } from "lucide-react";
+import { useEffect, useState } from "react";
+import { FileDown, Wifi, WifiOff } from "lucide-react";
 import InstallButton from "./install-button";
 import ThemeToggle from "./theme-toggle";
 
@@ -11,6 +12,19 @@ export default function Header({
   officeOnline: boolean;
   officeVersion?: string;
 }) {
+  const [online, setOnline] = useState(true);
+  useEffect(() => {
+    setOnline(navigator.onLine);
+    const up = () => setOnline(true);
+    const down = () => setOnline(false);
+    window.addEventListener("online", up);
+    window.addEventListener("offline", down);
+    return () => {
+      window.removeEventListener("online", up);
+      window.removeEventListener("offline", down);
+    };
+  }, []);
+
   return (
     <header className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-5 py-4 border-b border-[var(--ld-border)] bg-[var(--ld-panel)]">
       <div className="flex items-center gap-3 min-w-0">
@@ -32,6 +46,22 @@ export default function Header({
       </div>
 
       <div className="flex items-center gap-3 shrink-0">
+        <span
+          className={`hidden sm:flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider ${
+            online ? "text-[var(--ld-ok)]" : "text-[var(--ld-err)]"
+          }`}
+          title={online ? "Browser online — all routes available" : "Browser offline — only 100% local routes work"}
+        >
+          {online ? (
+            <>
+              <Wifi size={12} aria-hidden="true" /> online
+            </>
+          ) : (
+            <>
+              <WifiOff size={12} aria-hidden="true" /> offline
+            </>
+          )}
+        </span>
         <span
           className={`hidden sm:flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider ${
             officeOnline ? "text-[var(--ld-ok)]" : "text-[var(--ld-dim)]"

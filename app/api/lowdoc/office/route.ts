@@ -7,6 +7,7 @@ import { join } from "node:path";
 
 const execFileAsync = promisify(execFile);
 const OFFICE_TIMEOUT_MS = 90_000;
+const MAX_UPLOAD_BYTES = 200 * 1024 * 1024;
 
 const TO_EXT: Record<string, string> = {
   pdf: "pdf",
@@ -69,6 +70,9 @@ export async function POST(req: NextRequest) {
   const bytes = new Uint8Array(await file.arrayBuffer());
   if (bytes.byteLength === 0) {
     return NextResponse.json({ error: "empty file" }, { status: 400 });
+  }
+  if (bytes.byteLength > MAX_UPLOAD_BYTES) {
+    return NextResponse.json({ error: "file exceeds 200 MB server-assisted limit" }, { status: 413 });
   }
 
   let dir: string | null = null;
@@ -133,11 +137,12 @@ export async function POST(req: NextRequest) {
               ? "text/html"
               : "application/octet-stream";
 
+    const safeOutName = outName.replace(/[^A-Za-z0-9._-]+/g, "_").slice(0, 200) || `output.${ext}`;
     return new NextResponse(new Uint8Array(outBytes), {
       status: 200,
       headers: {
         "Content-Type": mime,
-        "Content-Disposition": `attachment; filename="${outName}"`,
+        "Content-Disposition": `attachment; filename="${safeOutName}"`,
         "Cache-Control": "no-store",
       },
     });

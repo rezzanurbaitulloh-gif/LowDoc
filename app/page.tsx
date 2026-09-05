@@ -26,6 +26,7 @@ import {
 import { parseRanges, extractPages, deletePages, reorderPages, rotatePages, addWatermark, addPageNumbers, addText } from "@/lib/lowdoc/pdf-toolkit";
 import PaperSelector, { type SelectedPaper } from "@/components/lowdoc/paper-selector";
 import ArchiveToolkit from "@/components/lowdoc/archive-toolkit";
+import ImageToolkit, { type ImageToolkitOp } from "@/components/lowdoc/image-toolkit";
 import Diagnostics from "@/components/lowdoc/diagnostics";
 import HistoryPanel from "@/components/lowdoc/history-panel";
 import { mmToTwips } from "@/lib/lowdoc/paper";
@@ -378,6 +379,47 @@ export default function LowDocPage() {
     [],
   );
 
+  const handleImageToolkitRun = useCallback(
+    async (
+      op: ImageToolkitOp,
+      toolkitFiles: File[],
+      opts?: {
+        width?: number;
+        height?: number;
+        maintainAspect?: boolean;
+        quality?: number;
+        format?: "png" | "jpg" | "webp" | "avif";
+        rotation?: number;
+        flipH?: boolean;
+        flipV?: boolean;
+        crop?: { x: number; y: number; width: number; height: number };
+        removeMetadata?: boolean;
+      },
+    ) => {
+      const { imageToBlob } = await import("@/lib/lowdoc/image-operations");
+      let ok = 0;
+      for (const file of toolkitFiles) {
+        try {
+          const result = await imageToBlob(file, { op, ...opts });
+          const url = URL.createObjectURL(new Blob([result.data as unknown as BlobPart], { type: result.mime }));
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = result.name;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 5000);
+          ok++;
+          consoleBus.success(`image ${op}: ${file.name} → ${result.name}`);
+        } catch (err) {
+          consoleBus.error(`image ${op}: ${file.name} — ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
+      consoleBus.info(`image ${op}: ${ok}/${toolkitFiles.length} done`);
+    },
+    [],
+  );
+
   const handleToolkitDownload = useCallback((task: PdfToolkitTask) => {
     if (!task.outputUrl) return;
     const a = document.createElement("a");
@@ -398,6 +440,7 @@ export default function LowDocPage() {
           {(
             [
               ["convert", "Convert"],
+              ["images", "Image Tools"],
               ["tools", "PDF Tools"],
             ] as [Mode, string][]
           ).map(([m, label]) => (
@@ -582,6 +625,12 @@ export default function LowDocPage() {
               </div>
             </section>
           )}
+        </div>
+      )}
+
+      {mode === "images" && (
+        <div className="px-5 pt-4 pb-2 max-w-[1440px] mx-auto">
+          <ImageToolkit onRun={handleImageToolkitRun} />
         </div>
       )}
 

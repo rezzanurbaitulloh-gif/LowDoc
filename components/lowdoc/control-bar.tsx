@@ -11,7 +11,7 @@ const INPUT_EXTENSIONS = [
   "wpd", "sdw", "sxw",
   "html", "md", "epub", "tex", "org", "rst", "adoc", "json", "xml",
   "csv", "tsv", "pdf", "dxf",
-  "png", "jpg", "jpeg", "webp", "tiff", "gif", "bmp", "ico", "heic",
+  "png", "jpg", "jpeg", "webp", "tiff", "gif", "bmp", "ico",
 ];
 
 export default function ControlBar({

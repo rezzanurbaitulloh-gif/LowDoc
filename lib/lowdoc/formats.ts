@@ -93,7 +93,6 @@ export const FORMATS: LowDocFormat[] = [
   { key: "tiff", name: "TIFF", extensions: ["tiff", "tif"], category: "image", kind: "binary", description: "Tagged Image File Format" },
   { key: "bmp", name: "BMP", extensions: ["bmp"], category: "image", kind: "binary", description: "Windows Bitmap" },
   { key: "ico", name: "ICO", extensions: ["ico"], category: "image", kind: "binary", description: "Windows Icon" },
-  { key: "heic", name: "HEIC", extensions: ["heic"], category: "image", kind: "binary", description: "High Efficiency Image Codec" },
 ];
 
 export const FORMAT_BY_KEY: Record<string, LowDocFormat> = Object.fromEntries(

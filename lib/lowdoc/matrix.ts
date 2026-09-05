@@ -36,7 +36,6 @@ export type LowDocTarget =
   | "gif"
   | "tiff"
   | "ico"
-  | "heic"
   | "bmp";
 
 export type LowDocEngine =
@@ -77,7 +76,6 @@ export const TARGETS: LowDocTarget[] = [
   "gif",
   "tiff",
   "ico",
-  "heic",
   "bmp",
   "doc",
   "docm",
@@ -127,7 +125,6 @@ export const TARGET_LABELS: Record<LowDocTarget, string> = {
   gif: "GIF",
   tiff: "TIFF",
   ico: "ICO",
-  heic: "HEIC",
   bmp: "BMP",
 };
 
@@ -192,7 +189,6 @@ export const EXTENSION_OF: Record<LowDocTarget, string> = {  pdf: "pdf",
   gif: "gif",
   tiff: "tiff",
   ico: "ico",
-  heic: "heic",
   bmp: "bmp",
 };
 

@@ -221,7 +221,7 @@ const PANDOC_PAIRS: [string, LowDocTarget[]][] = [
   ["adoc", ["md", "html", "docx", "epub", "odt", "rtf", "tex", "txt", "org", "rst", "json", "xml", "pptx"]],
   ["json", ["md", "html", "docx", "epub", "odt", "rtf", "tex", "txt", "org", "rst", "adoc", "xml", "pptx"]],
   ["xml", ["md", "html", "docx", "epub", "odt", "rtf", "tex", "txt", "org", "rst", "adoc", "json", "pptx"]],
-  ["csv", ["md", "html", "docx", "epub", "odt", "rtf", "tex", "txt", "org", "rst", "adoc", "json", "xml", "pptx"]],
+  ["csv", ["md", "html", "docx", "epub", "odt", "rtf", "tex", "txt", "org", "rst", "adoc", "xml", "pptx"]],
 ];
 
 const MAGICK_PAIRS: [string, LowDocTarget[]][] = [
@@ -518,11 +518,10 @@ export function getCapability(src: string, tgt: string): CapabilityInfo | null {
   const path = findPath(src, tgt);
   if (!path) return null;
   const override = PAIR_OVERRIDES[`${src}:${tgt}`];
-  const local = !path.some((h) => h.engine === "office");
+  const local = path.length === 0 || !path.some((h) => h.engine === "office");
 
   if (override) return { status: override.cap, note: override.note, local };
-  if (path.length === 1 && path[0].engine === "bridge" && src === tgt)
-    return { status: "high", note: "Direct copy", local: true };
+  if (path.length === 0) return { status: "high", note: "Already in target format — direct copy", local: true };
 
   let worst: Capability = "high";
   let worstNote = "";

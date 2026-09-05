@@ -140,12 +140,12 @@ export async function checkOffice(onEvent?: EngineEventHandler): Promise<OfficeA
     const res = await fetch("/api/lowdoc/office/health", { cache: "no-store" });
     if (!res.ok) throw new Error(`health ${res.status}`);
     const api: OfficeApi = await res.json();
-    if (api.status === "ok") {
+    if (api.status === "ok" && api.version !== "static-export") {
       _officeCache = api;
       emit(onEvent, { type: "success", message: `LibreOffice online (${api.version ?? "?"})` });
     } else {
-      _officeCache = api;
-      emit(onEvent, { type: "warn", message: "LibreOffice unavailable — office fallback disabled" });
+      _officeCache = { status: "unavailable", error: "no conversion server in this deployment" };
+      emit(onEvent, { type: "warn", message: "LibreOffice unavailable — office routes need a self-hosted helper" });
     }
     return _officeCache;
   } catch (err) {
@@ -168,6 +168,11 @@ export async function convertViaOffice(
   fd.append("to", to);
   const res = await fetch("/api/lowdoc/office", { method: "POST", body: fd });
   if (!res.ok) {
+    if (res.status === 404 || res.status === 501) {
+      throw new Error(
+        "office helper unavailable in this deployment — office formats need a self-hosted helper (see About)",
+      );
+    }
     let detail = "";
     try {
       const j = await res.json();
@@ -175,7 +180,7 @@ export async function convertViaOffice(
     } catch {
       /* noop */
     }
-    throw new Error(`office route ${res.status} ${detail}`.trim());
+    throw new Error(`office conversion failed (${res.status}) ${detail}`.trim());
   }
   const buf = new Uint8Array(await res.arrayBuffer());
   if (buf.byteLength === 0) {
@@ -500,7 +505,11 @@ async function runSheets(
 ): Promise<Uint8Array> {
   const mod = await import("xlsx");
   const XLSX = mod.default ?? mod;
-  const wb = XLSX.read(inputBytes, { type: "array" });
+  const ext = inputExtension(inputName);
+  const wb =
+    ext === "csv" || ext === "tsv"
+      ? XLSX.read(new TextDecoder().decode(inputBytes), { type: "string" })
+      : XLSX.read(inputBytes, { type: "array" });
   if (to === "xlsx") {
     const out = XLSX.write(wb, { bookType: "xlsx", type: "array" });
     emit(onEvent, { type: "success", message: `sheets: ${inputName} → xlsx` });
@@ -522,13 +531,18 @@ async function runSheets(
     return new TextEncoder().encode(text);
   }
   if (to === "json") {
-    const out: Record<string, unknown>[] = [];
-    for (const name of wanted) {
-      const sheet = wb.Sheets[name];
-      if (!sheet) continue;
-      out.push({ sheet: name, rows: XLSX.utils.sheet_to_json(sheet) });
-    }
-    const text = JSON.stringify(out, null, 2);
+    const single = (ext === "csv" || ext === "tsv") && wanted.length === 1;
+    const text = single
+      ? JSON.stringify(XLSX.utils.sheet_to_json(wb.Sheets[wanted[0]]), null, 2)
+      : JSON.stringify(
+          wanted.flatMap((name) => {
+            const sheet = wb.Sheets[name];
+            if (!sheet) return [];
+            return [{ sheet: name, rows: XLSX.utils.sheet_to_json(sheet) }];
+          }),
+          null,
+          2,
+        );
     emit(onEvent, { type: "success", message: `sheets: ${inputName} → json` });
     return new TextEncoder().encode(text);
   }

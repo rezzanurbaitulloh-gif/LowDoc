@@ -102,6 +102,8 @@ export default function PreviewModal({
     if (e.key === "Escape") onClose();
   };
   const [paper, setPaper] = useState("A4");
+  const [pageIdx, setPageIdx] = useState(0);
+  const [zoom, setZoom] = useState(1);
   const [pages, setPages] = useState<PdfPage[] | null>(null);
   const [imageData, setImageData] = useState<string | null>(null);
   const [imageDims, setImageDims] = useState<{ w: number; h: number } | null>(null);
@@ -115,6 +117,8 @@ export default function PreviewModal({
     setLoading(true);
     setError(null);
     setPages(null);
+    setPageIdx(0);
+    setZoom(1);
     setImageData(null);
     setImageDims(null);
     setTextContent(null);
@@ -127,9 +131,9 @@ export default function PreviewModal({
         const type = item.outputType ?? blob.type;
 
         if (type === "application/pdf" || item.outputName?.toLowerCase().endsWith(".pdf")) {
+          const { ensurePdfJs } = await import("@/lib/lowdoc/engines");
+          await ensurePdfJs();
           const pdfjsLib = await import("pdfjs-dist");
-          const { default: workerUrl } = await import("pdfjs-dist/build/pdf.worker.min.mjs?url");
-          pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
           const pdf = await pdfjsLib.getDocument({ data: await blob.arrayBuffer() }).promise;
           const rendered: PdfPage[] = [];
           for (let i = 1; i <= pdf.numPages; i++) {
@@ -240,36 +244,48 @@ export default function PreviewModal({
 
           {/* PDF pages on paper sheets */}
           {pages && (
-            <div className="flex flex-col items-center gap-5">
+            <div className="flex flex-col items-center gap-4">
               <div className="font-mono text-[10px] text-[var(--ld-dim)] uppercase tracking-wider">
                 {paper} · {fmt.w}×{fmt.h} mm · {pages.length} page(s)
               </div>
-              {pages.map((p, i) => {
-                const sheetH = Math.min(520, (p.width / sheetAspect) * 0.72 + 200);
+              <div className="flex flex-wrap items-center justify-center gap-2" role="toolbar" aria-label="Preview controls">
+                <button type="button" className="ld-chip" disabled={pageIdx <= 0} onClick={() => setPageIdx((i) => Math.max(0, i - 1))} aria-label="Previous page">‹ Prev</button>
+                <span className="font-mono text-[11px] text-[var(--ld-text)]" aria-live="polite">
+                  {Math.min(pageIdx + 1, pages.length)} / {pages.length}
+                </span>
+                <button type="button" className="ld-chip" disabled={pageIdx >= pages.length - 1} onClick={() => setPageIdx((i) => Math.min(pages.length - 1, i + 1))} aria-label="Next page">Next ›</button>
+                <button type="button" className="ld-chip" onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.25).toFixed(2)))} aria-label="Zoom out">−</button>
+                <span className="font-mono text-[11px] text-[var(--ld-text)]">{Math.round(zoom * 100)}%</span>
+                <button type="button" className="ld-chip" onClick={() => setZoom((z) => Math.min(3, +(z + 0.25).toFixed(2)))} aria-label="Zoom in">+</button>
+                <button type="button" className="ld-chip" onClick={() => setZoom(1)} aria-label="Reset zoom">Fit</button>
+              </div>
+              {(() => {
+                const p = pages[Math.min(pageIdx, pages.length - 1)];
+                const sheetH = Math.min(520, (p.width / sheetAspect) * 0.72 + 200) * zoom;
                 const drawW = sheetH * sheetAspect;
                 const drawH = sheetH;
                 const ratio = Math.min(drawW / p.width, drawH / p.height);
                 const w = Math.floor(p.width * ratio);
                 const h = Math.floor(p.height * ratio);
                 return (
-                  <div key={i} className="w-full flex flex-col items-center gap-1.5">
+                  <div key={Math.min(pageIdx, pages.length - 1)} className="w-full flex flex-col items-center gap-1.5">
                     <div className="font-mono text-[9px] text-[var(--ld-dim)]">
-                      — page {i + 1} —
+                      — page {Math.min(pageIdx, pages.length - 1) + 1} —
                     </div>
                     <div
-                      className="bg-white shadow-[0_4px_20px_rgba(0,0,0,0.5)] flex items-center justify-center"
-                      style={{ aspectRatio: `${fmt.w}/${fmt.h}`, height: sheetH, width: "auto" }}
+                      className="bg-white shadow-[0_4px_20px_rgba(0,0,0,0.5)] flex items-center justify-center max-w-full overflow-auto"
+                      style={{ aspectRatio: `${fmt.w}/${fmt.h}`, height: sheetH, width: "auto", maxWidth: "100%" }}
                     >
                       <img
                         src={p.dataUrl}
-                        alt={`page ${i + 1}`}
-                        style={{ width: w, height: h }}
+                        alt={`page ${Math.min(pageIdx, pages.length - 1) + 1}`}
+                        style={{ width: w, height: h, maxWidth: "none" }}
                         className="block"
                       />
                     </div>
                   </div>
                 );
-              })}
+              })()}
             </div>
           )}
 

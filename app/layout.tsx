@@ -4,6 +4,7 @@ import "./lowdoc.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://lowdoc.vercel.app"),
+  alternates: { canonical: "/" },
   title: {
     default: "LowDoc — Universal Document Converter",
     template: "%s",

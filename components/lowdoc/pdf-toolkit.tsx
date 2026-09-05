@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { FileUp } from "lucide-react";
+import { FileUp, RotateCw, RotateCcw, Trash2, GripVertical, Plus, Minus, Type, Image, Layout, FileText, Scissors, RotateCw as RotateCwIcon, RotateCcw as RotateCcwIcon, FlipHorizontal, FlipVertical, Download, X } from "lucide-react";
 import type { PdfToolkitTask } from "@/lib/lowdoc/pipeline";
 import { loadImageDims, resizeQualityLabel } from "@/lib/lowdoc/pdf-toolkit";
 
-export type ToolkitOp = "merge" | "split" | "compress" | "resize";
+export type ToolkitOp = "merge" | "split" | "compress" | "resize" | "extract" | "delete" | "reorder" | "rotate" | "watermark" | "pagenumbers" | "text" | "image" | "forms";
 
 export default function PdfToolkit({
   onRun,
@@ -14,7 +14,16 @@ export default function PdfToolkit({
     op: ToolkitOp,
     files: File[],
     rangesText: string,
-    opts?: { scale: number; format: "png" | "jpg" | "webp" },
+    opts?: { 
+      scale: number; 
+      format: "png" | "jpg" | "webp";
+      rotation?: number;
+      pages?: number[];
+      pageOrder?: number[];
+      watermarkText?: string;
+      watermarkOpacity?: number;
+      watermarkImage?: File;
+    },
   ) => Promise<void>;
 }) {
   const [mode, setMode] = useState<ToolkitOp>("merge");
@@ -24,21 +33,32 @@ export default function PdfToolkit({
   const [imgFormat, setImgFormat] = useState<"png" | "jpg" | "webp">("png");
   const [origDims, setOrigDims] = useState<{ width: number; height: number } | null>(null);
   const [running, setRunning] = useState(false);
+  const [rotation, setRotation] = useState(0);
+  const [pagesToDelete, setPagesToDelete] = useState<string>("");
+  const [pageOrder, setPageOrder] = useState<number[]>([]);
+  const [watermarkText, setWatermarkText] = useState("");
+  const [watermarkOpacity, setWatermarkOpacity] = useState(30);
+  const [pageNumberFormat, setPageNumberFormat] = useState("Page {n} of {total}");
+  const [textContent, setTextContent] = useState("");
+  const [textPosition, setTextPosition] = useState({ x: 50, y: 50 });
+  const [watermarkImage, setWatermarkImage] = useState<File | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setOrigDims(null);
-    if (mode === "resize" && files[0]) {
-      loadImageDims(files[0])
-        .then(setOrigDims)
-        .catch(() => setOrigDims(null));
+    if (mode === "resize" || mode === "rotate") {
+      if (files[0]) {
+        loadImageDims(files[0])
+          .then(setOrigDims)
+          .catch(() => setOrigDims(null));
+      }
     }
   }, [mode, files]);
 
   const pickFiles = (list: FileList | null) => {
     if (!list) return;
     const accepted =
-      mode === "resize"
+      mode === "resize" || mode === "rotate" || mode === "watermark"
         ? Array.from(list).filter((f) => /\.(png|jpe?g|webp|gif|bmp|tiff?|heic|ico)$/i.test(f.name))
         : Array.from(list).filter((f) => f.name.toLowerCase().endsWith(".pdf"));
     setFiles((prev) => {
@@ -51,14 +71,47 @@ export default function PdfToolkit({
     if (files.length === 0) return;
     setRunning(true);
     try {
-      await onRun(mode, files, ranges, { scale, format: imgFormat });
+      const opts: any = {};
+      if (mode === "resize") {
+        opts.width = width || undefined;
+        opts.height = height || undefined;
+        opts.maintainAspect = maintainAspect;
+        opts.format = format;
+        opts.quality = quality;
+      } else if (mode === "crop") {
+        opts.crop = cropData;
+        opts.format = format;
+        opts.quality = quality;
+      } else if (mode === "compress") {
+        opts.quality = quality;
+        opts.format = format;
+      } else if (mode === "rotate") {
+        opts.rotation = rotation;
+        opts.format = format;
+        opts.quality = quality;
+      } else if (mode === "flip") {
+        opts.flipH = flipH;
+        opts.flipV = flipV;
+        opts.format = format;
+        opts.quality = quality;
+      } else if (mode === "convert") {
+        opts.format = format;
+        opts.quality = quality;
+      } else if (mode === "optimize") {
+        opts.format = format;
+        opts.quality = quality;
+        opts.removeMetadata = removeMetadata;
+      } else if (mode === "metadata") {
+        opts.removeMetadata = removeMetadata;
+      }
+      await onRun(mode, files, opts);
     } finally {
       setRunning(false);
     }
   };
 
-  const targetW = origDims ? Math.max(1, Math.round((origDims.width * scale) / 100)) : 0;
-  const targetH = origDims ? Math.max(1, Math.round((origDims.height * scale) / 100)) : 0;
+  const targetW = origDims ? Math.max(1, Math.round((origDims.width * (width || 100)) / 100)) : 0;
+  const targetH = origDims ? Math.max(1, Math.round((origDims.height * (height || 100)) / 100)) : 0;
 
   return (
     <section className="ld-card">
@@ -70,6 +123,12 @@ export default function PdfToolkit({
               ["split", "Split PDF"],
               ["compress", "Compress PDF"],
               ["resize", "Image Resolution"],
+              ["extract", "Extract Pages"],
+              ["delete", "Delete Pages"],
+              ["reorder", "Reorder Pages"],
+              ["rotate", "Rotate Pages"],
+              ["watermark", "Watermark"],
+              ["pagenumbers", "Page Numbers"],
             ] as [ToolkitOp, string][]
           ).map(([m, label]) => (
             <button
@@ -105,12 +164,16 @@ export default function PdfToolkit({
               ? "Select the PDF to split"
               : mode === "compress"
                 ? "Select the PDF to compress"
-                : "Select an image (PNG / JPG / WebP / GIF / TIFF / BMP / HEIC / ICO)"}
+                : mode === "extract" || mode === "delete" || mode === "reorder" || mode === "rotate" || mode === "watermark" || mode === "pagenumbers"
+                  ? "Select PDF"
+                  : mode === "compress"
+                    ? "Select the PDF to compress"
+                    : "Select an image (PNG / JPG / WebP / GIF / TIFF / BMP / HEIC / ICO)"}
         </div>
         <input
           ref={inputRef}
           type="file"
-          accept={mode === "resize" ? "image/*" : "application/pdf"}
+          accept={mode === "resize" || mode === "rotate" ? "image/*" : "application/pdf"}
           multiple
           className="hidden"
           onChange={(e) => {
@@ -151,53 +214,204 @@ export default function PdfToolkit({
         </div>
       )}
 
-      {mode === "resize" && (
-        <div className="mt-4">
+      {mode === "extract" && (
+        <div className="mt-3">
+          <label htmlFor="extract-pages" className="ld-label">Page numbers to extract (comma-separated, e.g. 1,3,5-7)</label>
+          <input
+            id="extract-pages"
+            className="ld-input"
+            placeholder="1,3,5-7"
+            value={ranges}
+            onChange={(e) => setRanges(e.target.value)}
+          />
+        </div>
+      )}
+
+      {mode === "delete" && (
+        <div className="mt-3">
+          <label htmlFor="delete-pages" className="ld-label">Page numbers to delete (comma-separated, e.g. 1,3,5-7)</label>
+          <input
+            id="delete-pages"
+            className="ld-input"
+            placeholder="1,3,5-7"
+            value={pagesToDelete}
+            onChange={(e) => setPagesToDelete(e.target.value)}
+          />
+        </div>
+      )}
+
+      {mode === "reorder" && (
+        <div className="mt-3">
+          <label htmlFor="reorder-pages" className="ld-label">Page order (comma-separated page numbers, e.g. 3,1,2 for 3→1→2)</label>
+          <input
+            id="reorder-pages"
+            className="ld-input"
+            placeholder="3,1,2"
+            value={pageOrder.join(",")}
+            onChange={(e) => setPageOrder(e.target.value.split(",").map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n)))}
+          />
+          <p className="text-xs text-[var(--ld-muted)] mt-1">Enter new page order. Current PDF pages will be reordered accordingly.</p>
+        </div>
+      )}
+
+      {mode === "rotate" && (
+        <div className="mt-4 space-y-4">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2">
-              <span id="img-format-label" className="ld-label !mb-0">Format</span>
-              {(["png", "jpg", "webp"] as const).map((f) => (
-                <button
-                  key={f}
-                  type="button"
-                  className={`ld-chip ${imgFormat === f ? "ld-chip-selected" : ""}`}
-                  onClick={() => setImgFormat(f)}
-                >
-                  {f.toUpperCase()}
-                </button>
-              ))}
-            </div>
+            <span className="ld-label">Rotation</span>
+            <button type="button" className="ld-btn ld-btn-ghost !px-3 !py-1" onClick={() => setRotation((r) => (r + 90) % 360)}><RotateCw size={14} aria-hidden="true" /> 90° CW</button>
+            <button type="button" className="ld-btn ld-btn-ghost !px-3 !py-1" onClick={() => setRotation((r) => (r + 270) % 360)}><RotateCcw size={14} aria-hidden="true" /> 90° CCW</button>
+            <button type="button" className="ld-btn ld-btn-ghost !px-3 !py-1" onClick={() => setRotation((r) => (r + 180) % 360)}>180°</button>
+            <span className="font-mono text-xs text-[var(--ld-orange)]">{rotation}°</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="ld-label">Output Format</span>
+            {(["png", "jpg", "webp"] as const).map((f) => (
+              <button key={f} type="button" className={`ld-chip ${imgFormat === f ? "ld-chip-selected" : ""}`} onClick={() => setImgFormat(f)}>{f.toUpperCase()}</button>
+            ))}
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="ld-label">Quality</span>
+            <input type="range" min={10} max={100} step={5} value={quality} onChange={(e) => setQuality(parseInt(e.target.value, 10))} className="w-48 h-2 appearance-none rounded-full bg-[var(--ld-panel-2)] accent-[var(--ld-orange)]" aria-label="Quality" />
+            <span className="font-mono text-xs text-[var(--ld-dim)]">{quality}%</span>
+          </div>
+        </div>
+      )}
+
+      {mode === "watermark" && (
+        <div className="mt-4 space-y-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="ld-label">Text Watermark</span>
+            <input
+              type="text"
+              className="ld-input flex-1 min-w-48"
+              placeholder="CONFIDENTIAL"
+              value={watermarkText}
+              onChange={(e) => setWatermarkText(e.target.value)}
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="ld-label">Opacity</span>
+            <input type="range" min={0} max={100} step={5} value={watermarkOpacity} onChange={(e) => setWatermarkOpacity(parseInt(e.target.value, 10))} className="w-48 h-2 appearance-none rounded-full bg-[var(--ld-panel-2)] accent-[var(--ld-orange)]" />
+            <span className="font-mono text-xs text-[var(--ld-dim)]">{watermarkOpacity}%</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2">
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => setWatermarkImage(e.target.files?.[0] || null)} />
+              <button type="button" className="ld-btn ld-btn-ghost !px-3 !py-1" onClick={() => document.querySelector('input[type="file"][accept="image/*"]')?.click()}>
+                <Image size={14} aria-hidden="true" /> Image Watermark
+              </button>
+              {watermarkImage && <span className="text-xs text-[var(--ld-ok)]">{watermarkImage.name}</span>}
+            </label>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="ld-label">Format</span>
+            {(["png", "jpg", "webp"] as const).map((f) => (
+              <button key={f} type="button" className={`ld-chip ${imgFormat === f ? "ld-chip-selected" : ""}`} onClick={() => setImgFormat(f)}>{f.toUpperCase()}</button>
+            ))}
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="ld-label">Quality</span>
+            <input type="range" min={10} max={100} step={5} value={quality} onChange={(e) => setQuality(parseInt(e.target.value, 10))} className="w-48 h-2 appearance-none rounded-full bg-[var(--ld-panel-2)] accent-[var(--ld-orange)]" aria-label="Quality" />
+            <span className="font-mono text-xs text-[var(--ld-dim)]">{quality}%</span>
+          </div>
+        </div>
+      )}
+
+      {mode === "pagenumbers" && (
+        <div className="mt-4 space-y-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <label htmlFor="page-number-format" className="ld-label">Format</label>
+            <input
+              id="page-number-format"
+              className="ld-input flex-1 min-w-48"
+              placeholder="Page {n} of {total}"
+              value={pageNumberFormat}
+              onChange={(e) => setPageNumberFormat(e.target.value)}
+            />
+            <span className="text-xs text-[var(--ld-dim)]">Use {n} for page number, {total} for total pages</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="ld-label">Format</span>
+            {(["png", "jpg", "webp"] as const).map((f) => (
+              <button key={f} type="button" className={`ld-chip ${imgFormat === f ? "ld-chip-selected" : ""}`} onClick={() => setImgFormat(f)}>{f.toUpperCase()}</button>
+            ))}
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="ld-label">Quality</span>
+            <input type="range" min={10} max={100} step={5} value={quality} onChange={(e) => setQuality(parseInt(e.target.value, 10))} className="w-48 h-2 appearance-none rounded-full bg-[var(--ld-panel-2)] accent-[var(--ld-orange)]" aria-label="Quality" />
+            <span className="font-mono text-xs text-[var(--ld-dim)]">{quality}%</span>
+          </div>
+        </div>
+      )}
+
+      {mode === "resize" && (
+        <div className="mt-4 space-y-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <label htmlFor="resize-width" className="ld-label">Width</label>
+            <input
+              id="resize-width"
+              type="number"
+              min={1}
+              max={10000}
+              value={width || ""}
+              onChange={(e) => {
+                const val = parseInt(e.target.value, 10);
+                if (!isNaN(val)) setWidth(val);
+              }}
+              className="ld-input !w-24"
+            />
+            <span className="text-[var(--ld-dim)]">×</span>
+            <label htmlFor="resize-height" className="ld-label">Height</label>
+            <input
+              id="resize-height"
+              type="number"
+              min={1}
+              max={10000}
+              value={height || ""}
+              onChange={(e) => {
+                const val = parseInt(e.target.value, 10);
+                if (!isNaN(val)) setHeight(val);
+              }}
+              className="ld-input !w-24"
+            />
+            <label className="flex items-center gap-1.5">
+              <input
+                type="checkbox"
+                checked={maintainAspect}
+                onChange={(e) => setMaintainAspect(e.target.checked)}
+                className="w-4 h-4 accent-[var(--ld-orange)]"
+              />
+              <span className="font-mono text-xs text-[var(--ld-muted)]">Maintain aspect ratio</span>
+            </label>
           </div>
 
-          <div className="mt-4">
-            <label htmlFor="resize-scale" className="ld-label">Resize scale percentage</label>
-            <div className="flex items-center justify-between mb-1">
-              <span className="font-mono text-[10px] text-[var(--ld-orange)] uppercase tracking-wider">
-                ◀ downgrade
-              </span>
-              <span className="font-mono text-xs text-[var(--ld-text)]">
-                {scale}% {scale === 100 ? "(original)" : scale > 100 ? "(upscale ↑)" : "(downscale ↓)"}
-              </span>
-              <span className="font-mono text-[10px] text-[var(--ld-ok)] uppercase tracking-wider">
-                upgrade ▶
-              </span>
-            </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="ld-label">Format</span>
+            {(["png", "jpg", "webp", "avif"] as const).map((f) => (
+              <button
+                key={f}
+                type="button"
+                className={`ld-chip ${format === f ? "ld-chip-selected" : ""}`}
+                onClick={() => setFormat(f)}
+              >
+                {f.toUpperCase()}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="ld-label">Quality</span>
             <input
-              id="resize-scale"
               type="range"
-              min={5}
-              max={400}
+              min={10}
+              max={100}
               step={5}
-              value={scale}
-              onChange={(e) => setScale(parseInt(e.target.value, 10))}
-              className="w-full h-2 appearance-none rounded-full bg-[var(--ld-panel-2)] accent-[var(--ld-orange)]"
-              aria-label="Resize scale percentage"
+              value={quality}
+              onChange={(e) => setQuality(parseInt(e.target.value, 10))}
+              className="w-48 h-2 appearance-none rounded-full bg-[var(--ld-panel-2)] accent-[var(--ld-orange)]"
+              aria-label="Quality"
             />
-            <div className="flex justify-between font-mono text-[9px] text-[var(--ld-dim)] uppercase tracking-wider mt-1">
-              <span>5% · burik</span>
-              <span>100% · asli</span>
-              <span>400% · 4K</span>
-            </div>
+            <span className="font-mono text-xs text-[var(--ld-dim)]">{quality}%</span>
           </div>
 
           {origDims && (
@@ -208,12 +422,8 @@ export default function PdfToolkit({
                   {targetW}×{targetH} px
                 </span>
               </span>
-              <span
-                className={`ld-chip !cursor-default ${
-                  scale > 100 ? "ld-chip-success" : scale < 100 ? "ld-chip-warn" : ""
-                }`}
-              >
-                {scale === 100 ? "Original" : scale > 100 ? "Upscale" : "Downscale"} · {resizeQualityLabel(targetW)}
+              <span className={`ld-chip !cursor-default ${targetW > 0 && targetH > 0 ? "ld-chip-success" : "ld-chip-warn"}`}>
+                {resizeQualityLabel(targetW)}
               </span>
             </div>
           )}
@@ -223,7 +433,7 @@ export default function PdfToolkit({
       <button
         type="button"
         className="ld-btn ld-btn-primary mt-4"
-        disabled={running || files.length === 0 || (mode === "split" && !ranges.trim())}
+        disabled={running || files.length === 0 || (mode === "split" && !ranges.trim()) || (mode === "delete" && !pagesToDelete.trim()) || (mode === "reorder" && pageOrder.length === 0) || (mode === "watermark" && !watermarkText && !watermarkImage)}
         onClick={run}
       >
         {running
@@ -234,7 +444,19 @@ export default function PdfToolkit({
               ? "Split"
               : mode === "compress"
                 ? "Compress"
-                : "Resize Image"}
+                : mode === "extract"
+                  ? "Extract"
+                  : mode === "delete"
+                    ? "Delete"
+                    : mode === "reorder"
+                      ? "Reorder"
+                      : mode === "rotate"
+                        ? "Rotate"
+                        : mode === "watermark"
+                          ? "Apply Watermark"
+                          : mode === "pagenumbers"
+                            ? "Add Page Numbers"
+                            : "Resize Image"}
       </button>
     </section>
   );

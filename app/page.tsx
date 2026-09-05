@@ -23,7 +23,7 @@ import {
   type ConversionTask,
   type PdfToolkitTask,
 } from "@/lib/lowdoc/pipeline";
-import { parseRanges } from "@/lib/lowdoc/pdf-toolkit";
+import { parseRanges, extractPages, deletePages, reorderPages, rotatePages } from "@/lib/lowdoc/pdf-toolkit";
 import PaperSelector, { type SelectedPaper } from "@/components/lowdoc/paper-selector";
 import Diagnostics from "@/components/lowdoc/diagnostics";
 import HistoryPanel from "@/components/lowdoc/history-panel";
@@ -137,7 +137,7 @@ export default function LowDocPage() {
       op: ToolkitOp,
       toolkitFiles: File[],
       rangesText: string,
-      opts?: { scale: number; format: "png" | "jpg" | "webp" },
+      opts?: { scale: number; format: "png" | "jpg" | "webp"; rotation?: number; pages?: number[]; pageOrder?: number[]; watermarkText?: string; watermarkOpacity?: number; watermarkImage?: File },
     ) => {
       const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const base: PdfToolkitTask = { id, name: op, engine: op, status: "running" };
@@ -208,6 +208,59 @@ export default function LowDocPage() {
                     outputType: mime,
                     outputDims: `${result.width}×${result.height}`,
                   }
+                : t,
+            ),
+          );
+        } else if (op === "extract") {
+          const file = toolkitFiles[0];
+          const bytes = new Uint8Array(await file.arrayBuffer());
+          const pages = (opts?.pages ?? []).filter(n => n > 0);
+          const data = await extractPages(bytes, pages);
+          const url = URL.createObjectURL(new Blob([data as unknown as BlobPart], { type: "application/pdf" }));
+          setToolkitTasks((prev) =>
+            prev.map((t) =>
+              t.id === id
+                ? { ...t, status: "done", outputName: `extracted-pages.pdf`, outputUrl: url, outputSize: data.byteLength, outputType: "application/pdf" }
+                : t,
+            ),
+          );
+        } else if (op === "delete") {
+          const file = toolkitFiles[0];
+          const bytes = new Uint8Array(await file.arrayBuffer());
+          const pages = (opts?.pages ?? []).filter(n => n > 0);
+          const data = await deletePages(bytes, pages);
+          const url = URL.createObjectURL(new Blob([data as unknown as BlobPart], { type: "application/pdf" }));
+          setToolkitTasks((prev) =>
+            prev.map((t) =>
+              t.id === id
+                ? { ...t, status: "done", outputName: `${file.name.replace(/\.pdf$/i, "")}-pages-deleted.pdf`, outputUrl: url, outputSize: data.byteLength, outputType: "application/pdf" }
+                : t,
+            ),
+          );
+        } else if (op === "reorder") {
+          const file = toolkitFiles[0];
+          const bytes = new Uint8Array(await file.arrayBuffer());
+          const order = (opts?.pageOrder ?? []).filter(n => n > 0);
+          const data = await reorderPages(bytes, order);
+          const url = URL.createObjectURL(new Blob([data as unknown as BlobPart], { type: "application/pdf" }));
+          setToolkitTasks((prev) =>
+            prev.map((t) =>
+              t.id === id
+                ? { ...t, status: "done", outputName: `${file.name.replace(/\.pdf$/i, "")}-reordered.pdf`, outputUrl: url, outputSize: data.byteLength, outputType: "application/pdf" }
+                : t,
+            ),
+          );
+        } else if (op === "rotate") {
+          const file = toolkitFiles[0];
+          const bytes = new Uint8Array(await file.arrayBuffer());
+          const rotation = opts?.rotation ?? 90;
+          const pages = opts?.pages?.filter(n => n > 0) ?? [];
+          const data = await rotatePages(bytes, rotation, pages.length > 0 ? pages : undefined);
+          const url = URL.createObjectURL(new Blob([data as unknown as BlobPart], { type: "application/pdf" }));
+          setToolkitTasks((prev) =>
+            prev.map((t) =>
+              t.id === id
+                ? { ...t, status: "done", outputName: `${file.name.replace(/\.pdf$/i, "")}-rotated-${rotation}.pdf`, outputUrl: url, outputSize: data.byteLength, outputType: "application/pdf" }
                 : t,
             ),
           );

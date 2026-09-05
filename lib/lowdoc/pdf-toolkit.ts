@@ -1,6 +1,6 @@
 "use client";
 
-import { PDFDocument } from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb, degrees, radians } from "pdf-lib";
 
 export interface SplitRange {
   start: number;
@@ -64,6 +64,58 @@ export async function compressPdf(input: Uint8Array): Promise<Uint8Array> {
   return doc.save({ useObjectStreams: true });
 }
 
+/* ── new PDF operations ─────────────────────────────────────────────── */
+
+export async function extractPages(input: Uint8Array, pages: number[]): Promise<Uint8Array> {
+  const src = await PDFDocument.load(input, { ignoreEncryption: true });
+  const total = src.getPageCount();
+  const doc = await PDFDocument.create();
+  for (const p of pages) {
+    if (p >= 1 && p <= total) {
+      const pages = await doc.copyPages(src, [p - 1]);
+      for (const page of pages) doc.addPage(page);
+    }
+  }
+  return doc.save({ useObjectStreams: true });
+}
+
+export async function deletePages(input: Uint8Array, pagesToDelete: number[]): Promise<Uint8Array> {
+  const src = await PDFDocument.load(input, { ignoreEncryption: true });
+  const total = src.getPageCount();
+  const doc = await PDFDocument.create();
+  const keepIndices: number[] = [];
+  for (let i = 0; i < total; i++) {
+    if (!pagesToDelete.includes(i + 1)) keepIndices.push(i);
+  }
+  const pages = await doc.copyPages(src, keepIndices);
+  for (const page of pages) doc.addPage(page);
+  return doc.save({ useObjectStreams: true });
+}
+
+export async function reorderPages(input: Uint8Array, order: number[]): Promise<Uint8Array> {
+  const src = await PDFDocument.load(input, { ignoreEncryption: true });
+  const total = src.getPageCount();
+  const doc = await PDFDocument.create();
+  const validOrder = order.filter(p => p >= 1 && p <= total);
+  const pages = await doc.copyPages(src, validOrder.map(p => p - 1));
+  for (const page of pages) doc.addPage(page);
+  return doc.save({ useObjectStreams: true });
+}
+
+export async function rotatePages(input: Uint8Array, rotation: number, pages?: number[]): Promise<Uint8Array> {
+  const src = await PDFDocument.load(input, { ignoreEncryption: true });
+  const total = src.getPageCount();
+  const angle = (rotation % 360 + 360) % 360;
+  const targetPages = pages && pages.length > 0 ? pages : Array.from({ length: src.getPageCount() }, (_, i) => i + 1);
+  for (const p of targetPages) {
+    if (p >= 1 && p <= total) {
+      const page = src.getPage(p - 1);
+      page.setRotation(degrees(angle));
+    }
+  }
+  return src.save({ useObjectStreams: true });
+}
+
 /* ── image resize (resolution converter) ────────────────────────────── */
 
 export type ResizeFormat = "png" | "jpg" | "webp";
@@ -104,7 +156,7 @@ export async function resizeImage(
   file: File,
   scalePercent: number,
   format: ResizeFormat,
-): Promise<ResizedImage> {
+): Promise<{ data: Uint8Array; width: number; height: number; format: ResizeFormat }> {
   const url = URL.createObjectURL(file);
   try {
     const img = new Image();
@@ -124,7 +176,6 @@ export async function resizeImage(
     canvas.width = w;
     canvas.height = h;
     const ctx = canvas.getContext("2d")!;
-    // "burik" look when heavily downscaled: nearest-neighbor without smoothing
     if (scale < 0.3) {
       ctx.imageSmoothingEnabled = false;
     } else {

@@ -23,7 +23,7 @@ import {
   type ConversionTask,
   type PdfToolkitTask,
 } from "@/lib/lowdoc/pipeline";
-import { parseRanges, extractPages, deletePages, reorderPages, rotatePages } from "@/lib/lowdoc/pdf-toolkit";
+import { parseRanges, extractPages, deletePages, reorderPages, rotatePages, addWatermark, addPageNumbers, addText } from "@/lib/lowdoc/pdf-toolkit";
 import PaperSelector, { type SelectedPaper } from "@/components/lowdoc/paper-selector";
 import Diagnostics from "@/components/lowdoc/diagnostics";
 import HistoryPanel from "@/components/lowdoc/history-panel";
@@ -154,6 +154,12 @@ export default function LowDocPage() {
         flipV?: boolean;
         crop?: { x: number; y: number; width: number; height: number };
         removeMetadata?: boolean;
+        textContent?: string;
+        textPage?: number;
+        textX?: number;
+        textY?: number;
+        textFontSize?: number;
+        textColor?: { r: number; g: number; b: number };
       },
     ) => {
       const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -278,6 +284,49 @@ export default function LowDocPage() {
             prev.map((t) =>
               t.id === id
                 ? { ...t, status: "done", outputName: `${file.name.replace(/\.pdf$/i, "")}-rotated-${rotation}.pdf`, outputUrl: url, outputSize: data.byteLength, outputType: "application/pdf" }
+                : t,
+            ),
+          );
+        } else if (op === "watermark") {
+          const file = toolkitFiles[0];
+          const bytes = new Uint8Array(await file.arrayBuffer());
+          const data = await addWatermark(bytes, { text: opts?.watermarkText ?? "CONFIDENTIAL", opacity: opts?.watermarkOpacity ?? 30 });
+          const wurl = URL.createObjectURL(new Blob([data as unknown as BlobPart], { type: "application/pdf" }));
+          setToolkitTasks((prev) =>
+            prev.map((t) =>
+              t.id === id
+                ? { ...t, status: "done", outputName: `${file.name.replace(/\.pdf$/i, "")}-watermarked.pdf`, outputUrl: wurl, outputSize: data.byteLength, outputType: "application/pdf" }
+                : t,
+            ),
+          );
+        } else if (op === "pagenumbers") {
+          const file = toolkitFiles[0];
+          const bytes = new Uint8Array(await file.arrayBuffer());
+          const data = await addPageNumbers(bytes, "Page {n} of {total}");
+          const purl = URL.createObjectURL(new Blob([data as unknown as BlobPart], { type: "application/pdf" }));
+          setToolkitTasks((prev) =>
+            prev.map((t) =>
+              t.id === id
+                ? { ...t, status: "done", outputName: `${file.name.replace(/\.pdf$/i, "")}-numbered.pdf`, outputUrl: purl, outputSize: data.byteLength, outputType: "application/pdf" }
+                : t,
+            ),
+          );
+        } else if (op === "text") {
+          const file = toolkitFiles[0];
+          const bytes = new Uint8Array(await file.arrayBuffer());
+          const data = await addText(bytes, {
+            text: opts?.textContent ?? "",
+            page: opts?.textPage ?? 1,
+            x: opts?.textX ?? 50,
+            y: opts?.textY ?? 50,
+            fontSize: opts?.textFontSize ?? 12,
+            color: opts?.textColor ?? { r: 0, g: 0, b: 0 },
+          });
+          const turl = URL.createObjectURL(new Blob([data as unknown as BlobPart], { type: "application/pdf" }));
+          setToolkitTasks((prev) =>
+            prev.map((t) =>
+              t.id === id
+                ? { ...t, status: "done", outputName: `${file.name.replace(/\.pdf$/i, "")}-text.pdf`, outputUrl: turl, outputSize: data.byteLength, outputType: "application/pdf" }
                 : t,
             ),
           );

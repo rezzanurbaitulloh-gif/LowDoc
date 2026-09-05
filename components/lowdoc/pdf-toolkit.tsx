@@ -5,7 +5,7 @@ import { FileUp, RotateCw, RotateCcw, Trash2, GripVertical, Plus, Minus, Type, I
 import type { PdfToolkitTask } from "@/lib/lowdoc/pipeline";
 import { loadImageDims, resizeQualityLabel } from "@/lib/lowdoc/pdf-toolkit";
 
-export type ToolkitOp = "merge" | "split" | "compress" | "resize" | "extract" | "delete" | "reorder" | "rotate" | "watermark" | "pagenumbers" | "text" | "image" | "forms" | "crop" | "flip" | "convert" | "optimize" | "metadata";
+export type ToolkitOp = "merge" | "split" | "compress" | "resize" | "extract" | "delete" | "reorder" | "rotate" | "watermark" | "pagenumbers" | "text";
 
 export default function PdfToolkit({
   onRun,
@@ -46,8 +46,12 @@ export default function PdfToolkit({
   const [watermarkText, setWatermarkText] = useState("");
   const [watermarkOpacity, setWatermarkOpacity] = useState(30);
   const [pageNumberFormat, setPageNumberFormat] = useState("Page {n} of {total}");
-  const [textContent, setTextContent] = useState("");
   const [textPosition, setTextPosition] = useState({ x: 50, y: 50 });
+  const [textContent, setTextContent] = useState("");
+  const [textPage, setTextPage] = useState(1);
+  const [textFontSize, setTextFontSize] = useState(12);
+  const [textColor, setTextColor] = useState({ r: 0, g: 0, b: 0 });
+  const [textFont, setTextFont] = useState("Helvetica");
   const [watermarkImage, setWatermarkImage] = useState<File | null>(null);
   const [running, setRunning] = useState(false);
   
@@ -77,7 +81,7 @@ export default function PdfToolkit({
 
   const pickFiles = (list: FileList | null) => {
     if (!list) return;
-    const isImageMode = (mode as ToolkitOp) === "resize" || mode === "rotate" || mode === "watermark" || (mode as ToolkitOp) === "crop" || mode === "flip" || mode === "convert" || mode === "optimize" || mode === "metadata";
+    const isImageMode = mode === "resize" || mode === "rotate" || mode === "watermark";
     const accepted = isImageMode
       ? Array.from(list).filter((f) => /\.(png|jpe?g|webp|gif|bmp|tiff?|heic|ico|avif)$/i.test(f.name))
       : Array.from(list).filter((f) => f.name.toLowerCase().endsWith(".pdf"));
@@ -92,39 +96,41 @@ export default function PdfToolkit({
     setRunning(true);
     try {
       const opts: any = {};
-      if ((mode as ToolkitOp) === "resize") {
+      if (mode === "resize") {
         opts.width = width || undefined;
         opts.height = height || undefined;
         opts.maintainAspect = maintainAspect;
         opts.format = format;
         opts.quality = quality;
-      } else if ((mode as ToolkitOp) === "crop") {
-        opts.crop = cropData;
-        opts.format = format;
-        opts.quality = quality;
-      } else if ((mode as ToolkitOp) === "compress") {
+      } else if (mode === "compress") {
         opts.quality = quality;
         opts.format = format;
-      } else if ((mode as ToolkitOp) === "rotate") {
+      } else if (mode === "rotate") {
         opts.rotation = rotation;
         opts.format = format;
         opts.quality = quality;
-      } else if ((mode as ToolkitOp) === "flip") {
-        opts.flipH = flipH;
-        opts.flipV = flipV;
-        opts.format = format;
-        opts.quality = quality;
-      } else if ((mode as ToolkitOp) === "convert") {
-        opts.format = format;
-        opts.quality = quality;
-      } else if ((mode as ToolkitOp) === "optimize") {
-        opts.format = format;
-        opts.quality = quality;
-        opts.removeMetadata = removeMetadata;
-      } else if ((mode as ToolkitOp) === "metadata") {
-        opts.removeMetadata = removeMetadata;
+      } else if (mode === "extract" || mode === "delete") {
+        opts.pages = (mode === "delete" ? pagesToDelete : ranges)
+          .split(",")
+          .map((n) => parseInt(n.trim(), 10))
+          .filter((n) => !isNaN(n));
+      } else if (mode === "reorder") {
+        opts.pageOrder = pageOrder;
+      } else if (mode === "watermark") {
+        opts.watermarkText = watermarkText;
+        opts.watermarkOpacity = watermarkOpacity;
+        opts.watermarkImage = watermarkImage ?? undefined;
+      } else if (mode === "pagenumbers") {
+        opts.pageNumberFormat = pageNumberFormat;
+      } else if ((mode as ToolkitOp) === "text") {
+        opts.textContent = textContent;
+        opts.textPosition = textPosition;
+        opts.textFontSize = textFontSize;
+        opts.textColor = textColor;
+        opts.textFont = textFont;
+        opts.textPage = textPage;
       }
-      await onRun(mode, files, opts);
+      await onRun(mode, files, ranges, opts);
     } finally {
       setRunning(false);
     }
@@ -149,6 +155,7 @@ export default function PdfToolkit({
               ["rotate", "Rotate Pages"],
               ["watermark", "Watermark"],
               ["pagenumbers", "Page Numbers"],
+              ["text", "Add Text"],
             ] as [ToolkitOp, string][]
           ).map(([m, label]) => (
             <button
@@ -445,8 +452,119 @@ export default function PdfToolkit({
               <span className={`ld-chip !cursor-default ${targetW > 0 && targetH > 0 ? "ld-chip-success" : "ld-chip-warn"}`}>
                 {resizeQualityLabel(targetW)}
               </span>
+{origDims && (
+            <div className="mt-3 flex flex-wrap items-center gap-3 font-mono text-[11px]">
+              <span className="text-[var(--ld-muted)]">
+                {origDims.width}×{origDims.height} px →{" "}
+                <span className="text-[var(--ld-text)]">
+                  {targetW}×{targetH} px
+                </span>
+              </span>
+              <span className={`ld-chip !cursor-default ${targetW > 0 && targetH > 0 ? "ld-chip-success" : "ld-chip-warn"}`}>
+                {resizeQualityLabel(targetW)}
+              </span>
             </div>
           )}
+        </div>
+      )}
+
+      {(mode as ToolkitOp) === "text" && (
+        <div className="mt-4 space-y-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <label htmlFor="text-content" className="ld-label">Text Content</label>
+            <textarea
+              id="text-content"
+              className="ld-input min-h-24 resize-y flex-1"
+              placeholder="Enter text to add..."
+              value={textContent}
+              onChange={(e) => setTextContent(e.target.value)}
+              maxLength={5000}
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <label htmlFor="text-page" className="ld-label">Page</label>
+            <input
+              id="text-page"
+              type="number"
+              min={1}
+              value={textPage}
+              onChange={(e) => setTextPage(Math.max(1, parseInt(e.target.value, 10) || 1))}
+              className="ld-input !w-20"
+            />
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={false}
+                disabled
+                className="w-4 h-4 accent-[var(--ld-orange)]"
+              />
+              <span className="font-mono text-xs text-[var(--ld-muted)]">All pages</span>
+            </label>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <label htmlFor="text-x" className="ld-label">X</label>
+            <input
+              id="text-x"
+              type="number"
+              min={0}
+              value={textPosition.x}
+              onChange={(e) => setTextPosition(p => ({ ...p, x: parseInt(e.target.value, 10) || 0 }))}
+              className="ld-input !w-20"
+            />
+            <label htmlFor="text-y" className="ld-label">Y</label>
+            <input
+              id="text-y"
+              type="number"
+              min={0}
+              value={textPosition.y}
+              onChange={(e) => setTextPosition(p => ({ ...p, y: parseInt(e.target.value, 10) || 0 }))}
+              className="ld-input !w-20"
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <label htmlFor="text-font-size" className="ld-label">Font Size</label>
+            <input
+              id="text-font-size"
+              type="number"
+              min={6}
+              max={200}
+              value={textFontSize}
+              onChange={(e) => setTextFontSize(Math.max(6, Math.min(200, parseInt(e.target.value, 10) || 12)))}
+              className="ld-input !w-20"
+            />
+            <span className="ld-label">Font</span>
+            <select
+              id="text-font"
+              className="ld-select"
+              value={textFont}
+              onChange={(e) => setTextFont(e.target.value)}
+            >
+              <option value="Helvetica">Helvetica</option>
+              <option value="Helvetica-Bold">Helvetica Bold</option>
+              <option value="Helvetica-Oblique">Helvetica Oblique</option>
+              <option value="Times-Roman">Times Roman</option>
+              <option value="Times-Bold">Times Bold</option>
+              <option value="Courier">Courier</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="ld-label">Color</label>
+            <input
+              type="color"
+              value={`rgb(${textColor.r},${textColor.g},${textColor.b})`}
+              onChange={(e) => {
+                const hex = e.target.value;
+                const r = parseInt(hex.slice(1, 3), 16);
+                const g = parseInt(hex.slice(3, 5), 16);
+                const b = parseInt(hex.slice(5, 7), 16);
+                setTextColor({ r, g, b });
+              }}
+              className="w-10 h-8 rounded border border-[var(--ld-border)]"
+            />
+          </div>
+        </div>
+      )}
+
         </div>
       )}
 
@@ -474,9 +592,11 @@ export default function PdfToolkit({
                         ? "Rotate"
                         : mode === "watermark"
                           ? "Apply Watermark"
-                          : mode === "pagenumbers"
-                            ? "Add Page Numbers"
-                            : "Resize Image"}
+  : mode === "pagenumbers"
+                          ? "Add Page Numbers"
+                          : (mode as ToolkitOp) === "text"
+                            ? "Add Text"
+                            : "Run"}
       </button>
     </section>
   );

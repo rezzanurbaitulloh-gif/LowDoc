@@ -80,7 +80,7 @@ export interface ConversionTask {
 export interface PdfToolkitTask {
   id: string;
   name: string;
-  engine: "merge" | "split" | "compress" | "resize" | "extract" | "delete" | "reorder" | "rotate" | "watermark" | "pagenumbers" | "text" | "image" | "forms" | "crop" | "flip" | "convert" | "optimize" | "metadata";
+  engine: "merge" | "split" | "compress" | "resize" | "extract" | "delete" | "reorder" | "rotate" | "watermark" | "pagenumbers" | "text" | "image" | "forms" | "crop" | "flip" | "convert" | "optimize" | "metadata" | "annotate" | "sign";
   status: TaskStatus;
   outputName?: string;
   outputUrl?: string;

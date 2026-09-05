@@ -64,7 +64,7 @@ export async function compressPdf(input: Uint8Array): Promise<Uint8Array> {
   return doc.save({ useObjectStreams: true });
 }
 
-/* ── new PDF operations ─────────────────────────────────────────────── */
+/* ---- new PDF operations ---------------------------------------------------------------------------------------------- */
 
 export async function extractPages(input: Uint8Array, pages: number[]): Promise<Uint8Array> {
   const src = await PDFDocument.load(input, { ignoreEncryption: true });
@@ -141,7 +141,7 @@ export async function addText(input: Uint8Array, options: {
   const pageWidth = pageDims.width;
   const pageHeight = pageDims.height;
   
-  const pageToDraw = src.getPage(0);
+  const pageToDraw = src.getPage(pageIndex);
   pageToDraw.drawText(options.text, {
     x,
     y: pageHeight - y,
@@ -168,16 +168,74 @@ export async function addImage(input: Uint8Array, options: {
   
   let image;
   if (options.mimeType === "image/png") {
-    const png = await PDFDocument.load(options.imageData);
-    // This won't work directly - need to embed image
-    // For now, return original
-    return input;
+    image = await src.embedPng(options.imageData);
+  } else if (options.mimeType === "image/jpeg") {
+    image = await src.embedJpg(options.imageData);
   }
   
-  return input;
+  if (!image) return input;
+  
+  const page = src.getPage((options.page ?? 1) - 1);
+  const x = options.x ?? 50;
+  const y = options.y ?? 50;
+  const width = options.width ?? 100;
+  const height = options.height ?? 100;
+  
+  page.drawImage(image, {
+    x,
+    y,
+    width,
+    height,
+  });
+  
+  return src.save({ useObjectStreams: true });
 }
 
-/* ── image resize (resolution converter) ────────────────────────────── */
+export async function addWatermark(input: Uint8Array, options: {
+  text: string;
+  opacity?: number;
+}): Promise<Uint8Array> {
+  const src = await PDFDocument.load(input, { ignoreEncryption: true });
+  const font = await src.embedFont(StandardFonts.HelveticaBold);
+  const opacity = Math.min(1, Math.max(0, (options.opacity ?? 30) / 100));
+  for (const page of src.getPages()) {
+    const { width, height } = page.getSize();
+    const fontSize = Math.min(width, height) / 8;
+    const textWidth = font.widthOfTextAtSize(options.text, fontSize);
+    page.drawText(options.text, {
+      x: width / 2 - textWidth / 2,
+      y: height / 2,
+      size: fontSize,
+      font,
+      color: rgb(0.55, 0.55, 0.55),
+      opacity,
+      rotate: degrees(30),
+    });
+  }
+  return src.save({ useObjectStreams: true });
+}
+
+export async function addPageNumbers(input: Uint8Array, format = "Page {n} of {total}"): Promise<Uint8Array> {
+  const src = await PDFDocument.load(input, { ignoreEncryption: true });
+  const font = await src.embedFont(StandardFonts.Helvetica);
+  const total = src.getPageCount();
+  src.getPages().forEach((page, i) => {
+    const { width } = page.getSize();
+    const label = format.split("{n}").join(String(i + 1)).split("{total}").join(String(total));
+    const fontSize = 9;
+    const textWidth = font.widthOfTextAtSize(label, fontSize);
+    page.drawText(label, {
+      x: width / 2 - textWidth / 2,
+      y: 24,
+      size: fontSize,
+      font,
+      color: rgb(0.3, 0.3, 0.3),
+    });
+  });
+  return src.save({ useObjectStreams: true });
+}
+
+/* ---- image resize (resolution converter) ------------------------------------------------------------ */
 
 export type ResizeFormat = "png" | "jpg" | "webp" | "avif";
 

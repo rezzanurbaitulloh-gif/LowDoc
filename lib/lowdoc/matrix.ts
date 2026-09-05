@@ -48,7 +48,9 @@ export type LowDocEngine =
   | "sheets"
   | "mammoth"
   | "office"
-  | "bridge";
+  | "bridge"
+  | "docbuild"
+  | "pdfdocx";
 
 export const TARGETS: LowDocTarget[] = [
   "pdf",
@@ -139,6 +141,8 @@ export const ENGINE_LABELS: Record<LowDocEngine, string> = {
   mammoth: "Mammoth",
   office: "LibreOffice",
   bridge: "Bridge",
+  docbuild: "Doc-rebuild (WASM)",
+  pdfdocx: "PDF text reconstruction",
 };
 
 export const ENGINE_BADGE: Record<LowDocEngine, string> = {
@@ -152,6 +156,8 @@ export const ENGINE_BADGE: Record<LowDocEngine, string> = {
   mammoth: "MM",
   office: "LO",
   bridge: "BR",
+  docbuild: "DB",
+  pdfdocx: "PD",
 };
 
 export const EXTENSION_OF: Record<LowDocTarget, string> = {  pdf: "pdf",
@@ -304,6 +310,36 @@ const OFFICE_PAIRS: [string, LowDocTarget[]][] = [
   ["key", ["pdf", "pptx", "ppt", "ppsx", "odp", "html", "png", "jpg", "svg"]],
 ];
 
+const DOCBUILD_PAIRS: [string, LowDocTarget[]][] = [
+  // In-browser rebuild: vector PDF with selectable text, no server needed.
+  // Wins over office (weight 2 < 8) everywhere it applies.
+  ["docx", ["pdf"]],
+  ["docm", ["pdf"]],
+  ["dotx", ["pdf"]],
+  ["xlsx", ["pdf"]],
+  ["xls", ["pdf"]],
+  ["xlsm", ["pdf"]],
+  ["xlsb", ["pdf"]],
+  ["ods", ["pdf"]],
+  ["txt", ["pdf"]],
+  ["csv", ["pdf"]],
+  ["tsv", ["pdf"]],
+  ["html", ["pdf"]],
+  ["md", ["pdf"]],
+  ["rtf", ["pdf"]],
+  ["tex", ["pdf"]],
+  ["org", ["pdf"]],
+  ["rst", ["pdf"]],
+  ["adoc", ["pdf"]],
+  ["json", ["pdf"]],
+  ["xml", ["pdf"]],
+];
+
+const PDFDOCX_PAIRS: [string, LowDocTarget[]][] = [
+  // In-browser structural reconstruction via pdf.js text layer + docx writer.
+  ["pdf", ["docx"]],
+];
+
 const BRIDGE_PAIRS: [string, LowDocTarget[]][] = [
   ["txt", ["csv"]],
   ["png", ["svg"]],
@@ -333,6 +369,8 @@ const PDFJS_MAP = pairMap(PDFJS_PAIRS);
 const PDFTEXT_MAP = pairMap(PDFTEXT_PAIRS);
 const DXF_MAP = pairMap(DXF_PAIRS);
 const SHEETS_MAP = pairMap(SHEETS_PAIRS);
+const DOCBUILD_MAP = pairMap(DOCBUILD_PAIRS);
+const PDFDOCX_MAP = pairMap(PDFDOCX_PAIRS);
 const MAMMOTH_MAP = pairMap(MAMMOTH_PAIRS);
 const OFFICE_MAP = pairMap(OFFICE_PAIRS);
 const BRIDGE_MAP = pairMap(BRIDGE_PAIRS);
@@ -355,6 +393,8 @@ for (const ext of Object.keys(PDFJS_MAP)) register(ext, "pdfjs", PDFJS_MAP[ext],
 for (const ext of Object.keys(PDFTEXT_MAP)) register(ext, "pdftext", PDFTEXT_MAP[ext], 4);
 for (const ext of Object.keys(DXF_MAP)) register(ext, "dxf", DXF_MAP[ext], 5);
 for (const ext of Object.keys(SHEETS_MAP)) register(ext, "sheets", SHEETS_MAP[ext], 6);
+for (const ext of Object.keys(DOCBUILD_MAP)) register(ext, "docbuild", DOCBUILD_MAP[ext], 2);
+for (const ext of Object.keys(PDFDOCX_MAP)) register(ext, "pdfdocx", PDFDOCX_MAP[ext], 2);
 for (const ext of Object.keys(MAMMOTH_MAP)) register(ext, "mammoth", MAMMOTH_MAP[ext], 7);
 for (const ext of Object.keys(OFFICE_MAP)) register(ext, "office", OFFICE_MAP[ext], 8);
 for (const ext of Object.keys(BRIDGE_MAP)) register(ext, "bridge", BRIDGE_MAP[ext], 9);
@@ -428,6 +468,8 @@ function buildEdges(): Record<string, Array<{ engine: LowDocEngine; to: string }
     [PDFLIB_MAP, "pdflib"],
     [OFFICE_MAP, "office"],
     [BRIDGE_MAP, "bridge"],
+    [DOCBUILD_MAP, "docbuild"],
+    [PDFDOCX_MAP, "pdfdocx"],
   ];
   for (const [map, engine] of sources) {
     for (const from of Object.keys(map)) {
@@ -497,6 +539,8 @@ const ENGINE_CAP: Record<LowDocEngine, { cap: Capability; note: string }> = {
   pdfjs: { cap: "limited", note: "Pages rendered as image — text not selectable" },
   pdftext: { cap: "limited", note: "Text layer only — layout not preserved" },
   bridge: { cap: "supported", note: "Intermediate re-encode" },
+  docbuild: { cap: "supported", note: "Layout rebuilt in-browser — check output" },
+  pdfdocx: { cap: "limited", note: "Structural reconstruction — layout may shift" },
   dxf: { cap: "experimental", note: "Experimental CAD support" },
 };
 

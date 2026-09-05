@@ -13,7 +13,9 @@ export type EngineId =
   | "sheets"
   | "mammoth"
   | "office"
-  | "bridge";
+  | "bridge"
+  | "docbuild"
+  | "pdfdocx";
 
 export type EngineEventType = "info" | "success" | "warn" | "error" | "progress";
 
@@ -200,7 +202,7 @@ async function ensurePandoc(): Promise<void> {
   pandocReady = true;
 }
 
-async function runPandoc(
+export async function runPandoc(
   inputName: string,
   inputBytes: Uint8Array,
   to: LowDocTarget,
@@ -640,6 +642,31 @@ async function runBridge(
   throw new Error(`bridge: unsupported target ${to}`);
 }
 
+async function runDocbuild(
+  inputName: string,
+  inputBytes: Uint8Array,
+  onEvent?: EngineEventHandler,
+  opts?: ConversionOptions,
+): Promise<Uint8Array> {
+  const { docxToPdf, xlsxToPdf, textToPdf, csvToPdf, htmlToPdf } = await import("./docbuild");
+  const ext = inputExtension(inputName);
+  const paper =
+    opts?.paper != null
+      ? { w: Math.round(opts.paper.w / 56.6929), h: Math.round(opts.paper.h / 56.6929) }
+      : undefined;
+  const emit = onEvent ? (t: string, m: string) => onEvent({ type: t as "info", message: m }) : undefined;
+  if (ext === "docx" || ext === "docm" || ext === "dotx") return docxToPdf(inputBytes, paper, emit);
+  if (ext === "xlsx" || ext === "xls" || ext === "xlsm" || ext === "xlsb" || ext === "ods")
+    return xlsxToPdf(inputBytes, opts?.sheet, paper, emit);
+  if (ext === "csv" || ext === "tsv")
+    return csvToPdf(new TextDecoder().decode(inputBytes), paper);
+  if (ext === "html") return htmlToPdf(new TextDecoder().decode(inputBytes), paper);
+  if (ext === "txt") return textToPdf(new TextDecoder().decode(inputBytes), paper);
+  // markup/data inputs ride pandoc -> docx first (same engine set the matrix uses)
+  const docx = await runPandoc(inputName, inputBytes, "docx", onEvent);
+  return docxToPdf(docx, paper, emit);
+}
+
 async function runEngine(
   engine: EngineId,
   inputName: string,
@@ -669,6 +696,12 @@ async function runEngine(
       return convertViaOffice(inputName, inputBytes, target, onEvent);
     case "bridge":
       return runBridge(inputName, inputBytes, target, onEvent);
+    case "docbuild":
+      return runDocbuild(inputName, inputBytes, onEvent, opts);
+    case "pdfdocx": {
+      const { pdfToDocx } = await import("./docbuild");
+      return pdfToDocx(inputBytes, onEvent ? (t, m) => onEvent({ type: t as "info", message: m }) : undefined);
+    }
     default:
       throw new Error(`unknown engine: ${String(engine)}`);
   }

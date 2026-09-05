@@ -23,7 +23,7 @@ const FAQS = [
   },
   {
     q: "Does LowDoc upload my files?",
-    a: "Most conversions run entirely in your browser via WebAssembly — those files never leave your device. Office-family conversions (DOCX, ODT, PPTX and similar) require a full layout engine and are sent to an optional self-hosted helper running LibreOffice. Every conversion path is labeled “100% local” or “server-assisted” before you convert.",
+    a: "Most conversions run entirely in your browser via WebAssembly — those files never leave your device. Only legacy office formats (DOC, ODT, PPT and similar) require a full layout engine and are sent to an optional self-hosted helper running LibreOffice — and only when such a helper is available. Every conversion path is labeled “100% local” or “server-assisted” before you convert.",
   },
   {
     q: "Are my files stored anywhere?",

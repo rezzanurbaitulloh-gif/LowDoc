@@ -40,12 +40,15 @@ export default function AboutPage() {
           on your device.
         </p>
         <p>
-          Office-family formats (DOC, DOCX, ODT, PPTX and similar) need a full layout
-          engine, so those conversions use an optional self-hosted helper running
-          LibreOffice. When the helper is not available, those routes are clearly
-          marked as unavailable — we never pretend a conversion is local when it is
-          not. Every conversion path in the interface is labeled{" "}
-          <em>100% local</em> or <em>server-assisted</em>.
+          Modern office formats (DOCX, XLSX, PPTX text extraction, Markdown, HTML
+          and plain text) convert straight to PDF inside your browser with a
+          built-in layout engine. Legacy and complex formats (DOC, ODT, ODP,
+          PPT and similar) still need a full layout engine, so those conversions
+          use an optional self-hosted helper running LibreOffice. When the helper
+          is not available, those routes are disabled up front with an explanation
+          — we never pretend a conversion is local when it is not, and never let
+          you start one that cannot finish. Every conversion path in the interface
+          is labeled <em>100% local</em> or <em>server-assisted</em>.
         </p>
       </Section>
 
@@ -63,7 +66,8 @@ export default function AboutPage() {
           <li>PDF → DOCX is structural reconstruction; complex layouts may shift.</li>
           <li>PDF pages rendered to images lose selectable text.</li>
           <li>HEIC/HEIF is not supported by the in-browser image engine.</li>
-          <li>Office formats require the optional self-hosted helper.</li>
+          <li>Legacy office formats (DOC, ODT, PPT, …) require the optional self-hosted helper.</li>
+          <li>Rebuilt PDFs preserve text and structure but not pixel-exact original layout.</li>
         </ul>
       </Section>
 

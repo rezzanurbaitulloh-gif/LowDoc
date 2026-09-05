@@ -31,7 +31,7 @@ import Diagnostics from "@/components/lowdoc/diagnostics";
 import HistoryPanel from "@/components/lowdoc/history-panel";
 import { mmToTwips } from "@/lib/lowdoc/paper";
 import { recommendAuto } from "@/lib/lowdoc/auto";
-import { findPath } from "@/lib/lowdoc/matrix";
+import { pickEngine } from "@/lib/lowdoc/matrix";
 import { analyzeFile, describeAnalysis, compareAnalyses } from "@/lib/lowdoc/analyzer";
 import type { ToolkitOp } from "@/components/lowdoc/pdf-toolkit";
 
@@ -60,7 +60,9 @@ export default function LowDocPage() {
     !!effTarget &&
     files.some((f) => {
       const ext = f.name.split(".").pop()?.toLowerCase() ?? "";
-      return ext !== effTarget && !!findPath(ext, effTarget)?.some((h) => h.engine === "office");
+      if (ext === effTarget) return false;
+      // mirror execution routing: direct best-weight engine wins
+      return pickEngine(ext, effTarget as never) === "office";
     });
   const officeBlocked = needsOffice && !officeOnline;
   const srcExt = files[0]?.name.split(".").pop()?.toLowerCase() ?? "";

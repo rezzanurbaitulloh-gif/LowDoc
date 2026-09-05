@@ -31,6 +31,7 @@ import Diagnostics from "@/components/lowdoc/diagnostics";
 import HistoryPanel from "@/components/lowdoc/history-panel";
 import { mmToTwips } from "@/lib/lowdoc/paper";
 import { recommendAuto } from "@/lib/lowdoc/auto";
+import { findPath } from "@/lib/lowdoc/matrix";
 import { analyzeFile, describeAnalysis, compareAnalyses } from "@/lib/lowdoc/analyzer";
 import type { ToolkitOp } from "@/components/lowdoc/pdf-toolkit";
 
@@ -53,6 +54,15 @@ export default function LowDocPage() {
   const [showDiag, setShowDiag] = useState(false);
   const [analyses, setAnalyses] = useState<Record<string, import("@/lib/lowdoc/analyzer").FileAnalysis | null>>({});
   const autoRec = files[0] ? recommendAuto(files[0].name.split(".").pop()?.toLowerCase() ?? "") : null;
+  const effTarget = target || autoRec?.target.toLowerCase() || "";
+  const needsOffice =
+    files.length > 0 &&
+    !!effTarget &&
+    files.some((f) => {
+      const ext = f.name.split(".").pop()?.toLowerCase() ?? "";
+      return ext !== effTarget && !!findPath(ext, effTarget)?.some((h) => h.engine === "office");
+    });
+  const officeBlocked = needsOffice && !officeOnline;
   const srcExt = files[0]?.name.split(".").pop()?.toLowerCase() ?? "";
   const showSheets =
     ["xlsx", "xls", "xlsm", "xlsb", "ods"].includes(srcExt) &&
@@ -528,12 +538,21 @@ export default function LowDocPage() {
             <button
               type="button"
               className="ld-btn ld-btn-orange w-full !py-3 !text-sm"
-              disabled={running || files.length === 0}
+              disabled={running || files.length === 0 || officeBlocked}
+              title={officeBlocked ? "Needs the self-hosted office helper" : undefined}
               onClick={() => void handleConvert()}
             >
               <RefreshCw size={15} className={running ? "animate-spin" : ""} aria-hidden="true" />
               {running ? "Converting…" : `Convert ${files.length > 0 ? `${files.length} file(s)` : ""}`}
             </button>
+            {officeBlocked && (
+              <p className="mt-2 font-mono text-[10px] uppercase tracking-wider text-[var(--ld-err)]" role="alert">
+                ⚠ This route needs the self-hosted office helper — unavailable in this deployment.{" "}
+                <a href="/about" className="underline underline-offset-2">
+                  How to self-host
+                </a>
+              </p>
+            )}
             {!target && autoRec && (
               <p className="mt-2 font-mono text-[10px] uppercase tracking-wider text-[var(--ld-dim)]">
                 AUTO → {autoRec.label} · {autoRec.reason}

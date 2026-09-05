@@ -67,6 +67,22 @@ export default function AboutPage() {
         </ul>
       </Section>
 
+      <Section heading="Self-hosting with office support">
+        <p>
+          The public demo runs as a static site, so office-format conversions
+          (DOCX, ODT, PPTX and friends) are unavailable there. To enable them,
+          self-host with a server that has LibreOffice installed:
+        </p>
+        <pre className="ld-console p-3 whitespace-pre-wrap break-words text-xs max-h-48 overflow-y-auto">
+          git clone https://github.com/rezzanurbaitulloh-gif/LowDoc.git{"\n"}cd LowDoc{"\n"}
+          {"// remove the `output: 'export'` line from next.config.js, then:"}{"\n"}npm install{"\n"}npm run build{"\n"}npm start
+        </pre>
+        <p>
+          The app detects LibreOffice automatically and marks office routes as
+          available. Files sent to your own helper never leave your server.
+        </p>
+      </Section>
+
       <Section heading="Technology">
         <p>
           Next.js + React + TypeScript on the frontend; Pandoc, ImageMagick, pdf.js,

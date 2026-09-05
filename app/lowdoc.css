@@ -40,6 +40,7 @@
   color: var(--ld-text);
   font-family: var(--ld-sans);
   min-height: 100vh;
+  overflow-x: clip;
 }
 
 html[data-theme="dark"] .lowdoc {
@@ -352,7 +353,20 @@ html[data-theme="dark"] .lowdoc {
   border: 1px solid var(--ld-border-strong);
   border-radius: 4px;
   padding: 0;
-  overflow: hidden;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ld-seg::-webkit-scrollbar {
+  height: 4px;
+}
+
+.ld-seg::-webkit-scrollbar-thumb {
+  background: var(--ld-border-strong);
+  border: 0;
 }
 
 .ld-seg-btn {
@@ -367,6 +381,8 @@ html[data-theme="dark"] .lowdoc {
   border-radius: 0;
   cursor: pointer;
   user-select: none;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: background 140ms ease, color 140ms ease, box-shadow 140ms ease;
 }
 
@@ -567,4 +583,21 @@ html[data-theme="dark"] .ld-console {
 .lowdoc ::selection {
   background: rgba(215, 106, 28, 0.26);
   color: var(--ld-text);
+}
+
+/* ── touch targets (coarse pointers) ────────────────────────────────── */
+
+@media (pointer: coarse) {
+  .ld-chip {
+    padding: 0.625rem 0.875rem;
+    font-size: 0.75rem;
+  }
+
+  .ld-seg-btn {
+    padding: 0.6875rem 1.125rem;
+  }
+
+  .ld-btn {
+    padding: 0.75rem 1.125rem;
+  }
 }

@@ -198,15 +198,15 @@ export default function PreviewModal({
         onKeyDown={handleKeyDown}
       >
         {/* header */}
-        <div className="flex items-center justify-between gap-3 border-b border-[var(--ld-border)] px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-[var(--ld-border)] px-4 py-3">
           <div className="flex items-center gap-2 min-w-0">
             <Eye size={15} className="text-[var(--ld-orange)] shrink-0" aria-hidden="true" />
             <span className="font-mono text-xs text-[var(--ld-text)] truncate">
               {item.outputName ?? "Preview"}
             </span>
           </div>
-          <div className="flex items-center gap-3 shrink-0">
-            <div className="flex items-center gap-1">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <div className="flex flex-wrap items-center gap-1">
               {Object.keys(PAPER_FORMATS).map((name) => (
                 <button
                   key={name}

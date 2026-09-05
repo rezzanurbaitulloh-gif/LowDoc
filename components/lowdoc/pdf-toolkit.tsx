@@ -5,7 +5,7 @@ import { FileUp, RotateCw, RotateCcw, Trash2, GripVertical, Plus, Minus, Type, I
 import type { PdfToolkitTask } from "@/lib/lowdoc/pipeline";
 import { loadImageDims, resizeQualityLabel } from "@/lib/lowdoc/pdf-toolkit";
 
-export type ToolkitOp = "merge" | "split" | "compress" | "resize" | "extract" | "delete" | "reorder" | "rotate" | "watermark" | "pagenumbers" | "text" | "image" | "forms";
+export type ToolkitOp = "merge" | "split" | "compress" | "resize" | "extract" | "delete" | "reorder" | "rotate" | "watermark" | "pagenumbers" | "text" | "image" | "forms" | "crop" | "flip" | "convert" | "optimize" | "metadata";
 
 export default function PdfToolkit({
   onRun,
@@ -16,13 +16,21 @@ export default function PdfToolkit({
     rangesText: string,
     opts?: { 
       scale: number; 
-      format: "png" | "jpg" | "webp";
+      format?: "png" | "jpg" | "webp" | "avif";
       rotation?: number;
       pages?: number[];
       pageOrder?: number[];
       watermarkText?: string;
       watermarkOpacity?: number;
       watermarkImage?: File;
+      width?: number;
+      height?: number;
+      maintainAspect?: boolean;
+      quality?: number;
+      flipH?: boolean;
+      flipV?: boolean;
+      crop?: { x: number; y: number; width: number; height: number };
+      removeMetadata?: boolean;
     },
   ) => Promise<void>;
 }) {
@@ -32,7 +40,6 @@ export default function PdfToolkit({
   const [scale, setScale] = useState(100);
   const [imgFormat, setImgFormat] = useState<"png" | "jpg" | "webp">("png");
   const [origDims, setOrigDims] = useState<{ width: number; height: number } | null>(null);
-  const [running, setRunning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [pagesToDelete, setPagesToDelete] = useState<string>("");
   const [pageOrder, setPageOrder] = useState<number[]>([]);
@@ -42,6 +49,19 @@ export default function PdfToolkit({
   const [textContent, setTextContent] = useState("");
   const [textPosition, setTextPosition] = useState({ x: 50, y: 50 });
   const [watermarkImage, setWatermarkImage] = useState<File | null>(null);
+  const [running, setRunning] = useState(false);
+  
+  // Image toolkit state
+  const [format, setFormat] = useState<"png" | "jpg" | "webp" | "avif">("webp");
+  const [quality, setQuality] = useState(80);
+  const [width, setWidth] = useState(0);
+  const [height, setHeight] = useState(0);
+  const [maintainAspect, setMaintainAspect] = useState(true);
+  const [cropData, setCropData] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [flipH, setFlipH] = useState(false);
+  const [flipV, setFlipV] = useState(false);
+  const [removeMetadata, setRemoveMetadata] = useState(false);
+  
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -57,10 +77,10 @@ export default function PdfToolkit({
 
   const pickFiles = (list: FileList | null) => {
     if (!list) return;
-    const accepted =
-      mode === "resize" || mode === "rotate" || mode === "watermark"
-        ? Array.from(list).filter((f) => /\.(png|jpe?g|webp|gif|bmp|tiff?|heic|ico)$/i.test(f.name))
-        : Array.from(list).filter((f) => f.name.toLowerCase().endsWith(".pdf"));
+    const isImageMode = (mode as ToolkitOp) === "resize" || mode === "rotate" || mode === "watermark" || (mode as ToolkitOp) === "crop" || mode === "flip" || mode === "convert" || mode === "optimize" || mode === "metadata";
+    const accepted = isImageMode
+      ? Array.from(list).filter((f) => /\.(png|jpe?g|webp|gif|bmp|tiff?|heic|ico|avif)$/i.test(f.name))
+      : Array.from(list).filter((f) => f.name.toLowerCase().endsWith(".pdf"));
     setFiles((prev) => {
       const seen = new Set(prev.map((f) => f.name));
       return [...prev, ...accepted.filter((f) => !seen.has(f.name))];
@@ -72,36 +92,36 @@ export default function PdfToolkit({
     setRunning(true);
     try {
       const opts: any = {};
-      if (mode === "resize") {
+      if ((mode as ToolkitOp) === "resize") {
         opts.width = width || undefined;
         opts.height = height || undefined;
         opts.maintainAspect = maintainAspect;
         opts.format = format;
         opts.quality = quality;
-      } else if (mode === "crop") {
+      } else if ((mode as ToolkitOp) === "crop") {
         opts.crop = cropData;
         opts.format = format;
         opts.quality = quality;
-      } else if (mode === "compress") {
+      } else if ((mode as ToolkitOp) === "compress") {
         opts.quality = quality;
         opts.format = format;
-      } else if (mode === "rotate") {
+      } else if ((mode as ToolkitOp) === "rotate") {
         opts.rotation = rotation;
         opts.format = format;
         opts.quality = quality;
-      } else if (mode === "flip") {
+      } else if ((mode as ToolkitOp) === "flip") {
         opts.flipH = flipH;
         opts.flipV = flipV;
         opts.format = format;
         opts.quality = quality;
-      } else if (mode === "convert") {
+      } else if ((mode as ToolkitOp) === "convert") {
         opts.format = format;
         opts.quality = quality;
-      } else if (mode === "optimize") {
+      } else if ((mode as ToolkitOp) === "optimize") {
         opts.format = format;
         opts.quality = quality;
         opts.removeMetadata = removeMetadata;
-      } else if (mode === "metadata") {
+      } else if ((mode as ToolkitOp) === "metadata") {
         opts.removeMetadata = removeMetadata;
       }
       await onRun(mode, files, opts);
@@ -158,15 +178,15 @@ export default function PdfToolkit({
           <FileUp size={22} strokeWidth={1.5} aria-hidden="true" />
         </div>
         <div className="text-xs text-[var(--ld-muted)]">
-          {mode === "merge"
+          {(mode as ToolkitOp) === "merge"
             ? "Select 2+ PDFs to merge"
-            : mode === "split"
+            : (mode as ToolkitOp) === "split"
               ? "Select the PDF to split"
-              : mode === "compress"
+              : (mode as ToolkitOp) === "compress"
                 ? "Select the PDF to compress"
-                : mode === "extract" || mode === "delete" || mode === "reorder" || mode === "rotate" || mode === "watermark" || mode === "pagenumbers"
+                : (mode as ToolkitOp) === "extract" || (mode as ToolkitOp) === "delete" || (mode as ToolkitOp) === "reorder" || (mode as ToolkitOp) === "rotate" || (mode as ToolkitOp) === "watermark" || (mode as ToolkitOp) === "pagenumbers"
                   ? "Select PDF"
-                  : mode === "compress"
+                  : (mode as ToolkitOp) === "compress"
                     ? "Select the PDF to compress"
                     : "Select an image (PNG / JPG / WebP / GIF / TIFF / BMP / HEIC / ICO)"}
         </div>
@@ -297,7 +317,7 @@ export default function PdfToolkit({
           <div className="flex items-center gap-3">
             <label className="flex items-center gap-2">
               <input type="file" accept="image/*" className="hidden" onChange={(e) => setWatermarkImage(e.target.files?.[0] || null)} />
-              <button type="button" className="ld-btn ld-btn-ghost !px-3 !py-1" onClick={() => document.querySelector('input[type="file"][accept="image/*"]')?.click()}>
+              <button type="button" className="ld-btn ld-btn-ghost !px-3 !py-1" onClick={() => (document.querySelector('input[type="file"][accept="image/*"]') as HTMLInputElement)?.click()}>
                 <Image size={14} aria-hidden="true" /> Image Watermark
               </button>
               {watermarkImage && <span className="text-xs text-[var(--ld-ok)]">{watermarkImage.name}</span>}
@@ -328,7 +348,7 @@ export default function PdfToolkit({
               value={pageNumberFormat}
               onChange={(e) => setPageNumberFormat(e.target.value)}
             />
-            <span className="text-xs text-[var(--ld-dim)]">Use {n} for page number, {total} for total pages</span>
+            <span className="text-xs text-[var(--ld-dim)]">Use &#123;n&#125; for page number, &#123;total&#125; for total pages</span>
           </div>
           <div className="flex items-center gap-3">
             <span className="ld-label">Format</span>

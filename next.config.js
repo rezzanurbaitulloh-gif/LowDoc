@@ -26,6 +26,7 @@ const nextConfig = withPWA({
   typescript: {
     ignoreBuildErrors: true,
   },
+  output: 'export',
   webpack: (config) => {
     config.module = config.module || {};
     config.module.rules = config.module.rules || [];

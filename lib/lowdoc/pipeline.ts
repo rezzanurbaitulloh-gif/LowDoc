@@ -80,7 +80,7 @@ export interface ConversionTask {
 export interface PdfToolkitTask {
   id: string;
   name: string;
-  engine: "merge" | "split" | "compress" | "resize";
+  engine: "merge" | "split" | "compress" | "resize" | "extract" | "delete" | "reorder" | "rotate" | "watermark" | "pagenumbers" | "text" | "image" | "forms" | "crop" | "flip" | "convert" | "optimize" | "metadata";
   status: TaskStatus;
   outputName?: string;
   outputUrl?: string;
@@ -88,7 +88,6 @@ export interface PdfToolkitTask {
   outputType?: string;
   outputDims?: string;
   error?: string;
-  extra?: Array<{ name: string; url: string; size: number }>;
 }
 
 /* ── conversions ────────────────────────────────────────────────────── */
@@ -293,13 +292,13 @@ export interface ResizeResult {
   data: Uint8Array;
   width: number;
   height: number;
-  format: "png" | "jpg" | "webp";
+  format: "png" | "jpg" | "webp" | "avif";
 }
 
 export async function runResizeImage(
   file: File,
   scalePercent: number,
-  format: "png" | "jpg" | "webp",
+  format: "png" | "jpg" | "webp" | "avif",
   onEvent?: (e: EngineEvent) => void,
 ): Promise<ResizeResult> {
   const { resizeImage } = await import("./pdf-toolkit");

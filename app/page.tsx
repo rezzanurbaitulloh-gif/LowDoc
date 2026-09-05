@@ -32,7 +32,7 @@ import { recommendAuto } from "@/lib/lowdoc/auto";
 import { analyzeFile, describeAnalysis, compareAnalyses } from "@/lib/lowdoc/analyzer";
 import type { ToolkitOp } from "@/components/lowdoc/pdf-toolkit";
 
-type Mode = "convert" | "tools";
+type Mode = "convert" | "tools" | "images";
 
 export default function LowDocPage() {
   const [mode, setMode] = useState<Mode>("convert");
@@ -137,7 +137,24 @@ export default function LowDocPage() {
       op: ToolkitOp,
       toolkitFiles: File[],
       rangesText: string,
-      opts?: { scale: number; format: "png" | "jpg" | "webp"; rotation?: number; pages?: number[]; pageOrder?: number[]; watermarkText?: string; watermarkOpacity?: number; watermarkImage?: File },
+      opts?: { 
+        scale: number; 
+        format?: "png" | "jpg" | "webp" | "avif";
+        rotation?: number;
+        pages?: number[];
+        pageOrder?: number[];
+        watermarkText?: string;
+        watermarkOpacity?: number;
+        watermarkImage?: File;
+        width?: number;
+        height?: number;
+        maintainAspect?: boolean;
+        quality?: number;
+        flipH?: boolean;
+        flipV?: boolean;
+        crop?: { x: number; y: number; width: number; height: number };
+        removeMetadata?: boolean;
+      },
     ) => {
       const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const base: PdfToolkitTask = { id, name: op, engine: op, status: "running" };

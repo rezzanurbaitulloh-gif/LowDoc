@@ -145,13 +145,13 @@ export async function imageToBlob(file: File, options: ImageOperationOptions): P
 
   // Export to blob
   const mimeType = getMimeType(format);
-  const qualityVal = options.quality / 100;
+  const qualityVal = (options.quality ?? 80) / 100;
   
   const blob = await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob((blob) => {
       if (blob) resolve(blob);
       else reject(new Error("Canvas toBlob failed"));
-    }, mimeType, qualityVal / 100);
+    }, mimeType, qualityVal);
   });
 
   const arrayBuffer = await blob.arrayBuffer();

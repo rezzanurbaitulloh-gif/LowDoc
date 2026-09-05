@@ -142,7 +142,7 @@ export default function PdfToolkit({
   return (
     <section className="ld-card">
       <div className="flex flex-wrap items-center gap-2 mb-3">
-        <div className="ld-seg" role="tablist" aria-label="PDF tool">
+        <div className="ld-seg ld-seg-scroll" role="tablist" aria-label="PDF tool">
           {(
             [
               ["merge", "Merge PDFs"],
